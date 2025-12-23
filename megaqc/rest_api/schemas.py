@@ -2,27 +2,29 @@
 These schemas describe the format of the web requests to and from the API.
 
 They incidentally share most fields with the database models, but they can be
-opinionated about REST-specific fields
+opinionated about REST-specific fields.
+
+NOTE: This module has been updated for FastAPI/SQLAlchemy 2.0 compatibility.
+The schemas no longer rely on Flask-SQLAlchemy's session management.
 """
 from marshmallow import INCLUDE
 from marshmallow import Schema as BaseSchema
 from marshmallow import post_load, validate
+from marshmallow_jsonapi import Schema as JsonApiSchema
 from marshmallow_jsonapi import fields as f
-from marshmallow_jsonapi.flask import Relationship as FlaskRelationship
-from marshmallow_jsonapi.flask import Schema as JsonApiSchema
+from marshmallow_jsonapi.fields import Relationship as BaseRelationship
 from marshmallow_jsonapi.utils import resolve_params
 from marshmallow_polyfield import PolyField
-from marshmallow_sqlalchemy.fields import Related
-from marshmallow_sqlalchemy.schema import ModelSchema, ModelSchemaMeta, ModelSchemaOpts
 
-from megaqc.extensions import db
 from megaqc.model import models
 from megaqc.rest_api import outlier
 from megaqc.rest_api.fields import FilterReference, JsonString
 from megaqc.user import models as user_models
 
 
-class Relationship(FlaskRelationship):
+class Relationship(BaseRelationship):
+    """Custom Relationship field that works without Flask."""
+
     def _jsonschema_type_mapping(self):
         return {}
 
@@ -62,7 +64,6 @@ Schema = OptionalLinkSchema
 
 class SampleDataTypeSchema(Schema):
     class Meta:
-        sqla_session = db.session
         type_ = "data_types"
         model = models.SampleDataType
 
@@ -74,7 +75,6 @@ class SampleDataTypeSchema(Schema):
 
 class SampleDataSchema(Schema):
     class Meta:
-        sqla_session = db.session
         type_ = "sample_data"
         model = models.SampleData
         # self_view = 'rest_api.sampledata'
@@ -121,7 +121,6 @@ class SampleDataSchema(Schema):
 
 class SampleSchema(Schema):
     class Meta:
-        sqla_session = db.session
         model = models.Sample
         type_ = "samples"
         self_view = "rest_api.sample"
@@ -152,7 +151,6 @@ class SampleSchema(Schema):
 
 class SampleFilterSchema(OptionalLinkSchema):
     class Meta:
-        sqla_session = db.session
         type_ = "filters"
         model = models.SampleFilter
         self_view = "rest_api.filter"
@@ -183,7 +181,6 @@ class FilterGroupSchema(OptionalLinkSchema):
 
     class Meta:
         model = models.SampleFilter
-        sqla_session = db.session
         type_ = "filter_groups"
 
     id = f.String(attribute="sample_filter_tag", allow_none=True)
@@ -195,13 +192,11 @@ class ReportSchema(Schema):
     """
 
     class Meta:
-        sqla_session = db.session
         model = models.Report
         type_ = "reports"
         self_view = "rest_api.report"
         self_view_many = "rest_api.reportlist"
         self_view_kwargs = {"id": "<id>"}
-        strict = True
 
     id = f.Integer(attribute="report_id", allow_none=True, as_string=True)
     hash = f.String(attribute="report_hash")
@@ -240,13 +235,11 @@ class ReportSchema(Schema):
 
 class UploadSchema(Schema):
     class Meta:
-        sqla_session = db.session
         model = models.Upload
         type_ = "uploads"
         self_view = "rest_api.upload"
         self_view_many = "rest_api.uploadlist"
         self_view_kwargs = {"id": "<id>"}
-        strict = True
 
     id = f.Integer(attribute="upload_id", allow_none=True, as_string=True)
     status = f.String()
@@ -268,7 +261,6 @@ class UploadSchema(Schema):
 
 class ReportMetaSchema(Schema):
     class Meta:
-        sqla_session = db.session
         model = models.ReportMeta
         type_ = "report_meta"
         # self_view = 'rest_api.reportmeta'
@@ -293,7 +285,6 @@ class ReportMetaSchema(Schema):
 
 class FavouritePlotSchema(Schema):
     class Meta:
-        sqla_session = db.session
         model = models.PlotFavourite
         type_ = "favourites"
         self_view = "rest_api.favouriteplot"
@@ -321,7 +312,6 @@ class FavouritePlotSchema(Schema):
 
 class DashboardSchema(Schema):
     class Meta:
-        sqla_session = db.session
         model = models.Dashboard
         type_ = "dashboards"
 
@@ -350,7 +340,6 @@ class ReportMetaTypeSchema(Schema):
 
     class Meta:
         model = models.ReportMeta
-        sqla_session = db.session
         type_ = "report_meta_types"
 
     id = f.String(attribute="report_meta_key")
@@ -358,7 +347,6 @@ class ReportMetaTypeSchema(Schema):
 
 class UserSchema(Schema):
     class Meta:
-        sqla_session = db.session
         model = user_models.User
         type_ = "users"
         self_view = "rest_api.user"

@@ -29,9 +29,8 @@
   {% if self.header() %}<header>{% block header %}{% endblock %}</header>{% endif %}
   <div class="{% block content_class %}container-fluid{% endblock content_class %}">
 
-      {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
+      {% if flash_messages %}
+        {% for category, message in flash_messages %}
         <div class="alert alert-{{ category }}" role="alert">
           <button type="button" class="close" data-dismiss="alert" aria-label="Close">
             <span aria-hidden="true">&times;</span>
@@ -39,8 +38,7 @@
           {{message | safe}}
         </div>
         {% endfor %}
-        {% endif %}
-      {% endwith %}
+      {% endif %}
 
       {% block content %}{% endblock %}
 

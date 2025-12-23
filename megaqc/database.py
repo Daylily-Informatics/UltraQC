@@ -1,31 +1,39 @@
 # -*- coding: utf-8 -*-
 """
-Database module, including the SQLAlchemy database object and DB-related utilities.
+Database module for FastAPI with SQLAlchemy 2.0 async support.
 """
-from builtins import object
-from copy import copy
+from typing import AsyncGenerator, Optional
 
-from flask_migrate import stamp
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.engine.url import URL, make_url
-from sqlalchemy.exc import OperationalError, ProgrammingError
+from sqlalchemy.exc import OperationalError
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
-from .compat import basestring
-from .extensions import db
+from megaqc.settings import Settings
 
-# Alias common SQLAlchemy names
-Column = db.Column
+# Global engine and session factory
+_async_engine = None
+_sync_engine = None
+_async_session_factory: Optional[async_sessionmaker] = None
+_sync_session_factory: Optional[sessionmaker] = None
 
 
-class CRUDMixin(object):
+class Base(DeclarativeBase):
+    """Base class for all models."""
+    pass
+
+
+class CRUDMixin:
     """
     Mixin that adds convenience methods for CRUD (create, read, update, delete)
     operations.
     """
 
     @classmethod
-    def get_or_create(cls, kwargs):
-        instance = db.session.query(cls).filter_by(**kwargs).first()
+    def get_or_create(cls, session: Session, **kwargs):
+        """Get existing record or create new one."""
+        instance = session.query(cls).filter_by(**kwargs).first()
         if instance:
             return instance
         else:
@@ -33,36 +41,42 @@ class CRUDMixin(object):
             return instance
 
     @classmethod
-    def create(cls, **kwargs):
+    def create(cls, session: Session, **kwargs):
         """
-        Create a new record and save it the database.
+        Create a new record and save it to the database.
         """
         instance = cls(**kwargs)
-        return instance.save()
+        session.add(instance)
+        session.commit()
+        return instance
 
-    def update(self, commit=True, **kwargs):
+    def update(self, session: Session, commit: bool = True, **kwargs):
         """
         Update specific fields of a record.
         """
-        for attr, value in list(kwargs.items()):
+        for attr, value in kwargs.items():
             setattr(self, attr, value)
-        return commit and self.save() or self
+        if commit:
+            session.add(self)
+            session.commit()
+        return self
 
-    def save(self, commit=True):
+    def save(self, session: Session, commit: bool = True):
         """
         Save the record.
         """
-        db.session.add(self)
+        session.add(self)
         if commit:
-            db.session.commit()
+            session.commit()
         return self
 
-    def delete(self, commit=True):
+    def delete(self, session: Session, commit: bool = True):
         """
         Remove the record from the database.
         """
-        db.session.delete(self)
-        return commit and db.session.commit()
+        session.delete(self)
+        if commit:
+            session.commit()
 
     @property
     def primary_key(self):
@@ -77,17 +91,7 @@ class CRUDMixin(object):
         return cls.primary_key_columns()[0].name
 
 
-class Model(CRUDMixin, db.Model):
-    """
-    Base model class that includes CRUD convenience methods.
-    """
-
-    __abstract__ = True
-
-
-# From Mike Bayer's "Building the app" talk
-# https://speakerdeck.com/zzzeek/building-the-app
-class SurrogatePK(object):
+class SurrogatePK:
     """
     A mixin that adds a surrogate integer 'primary key' column named ``id`` to
     any declarative-mapped class.
@@ -95,31 +99,98 @@ class SurrogatePK(object):
 
     __table_args__ = {"extend_existing": True}
 
-    id = db.Column(db.Integer, primary_key=True)
-
     @classmethod
-    def get_by_id(cls, record_id):
+    def get_by_id(cls, session: Session, record_id):
         """
         Get record by ID.
         """
-        if any(
-            (
-                isinstance(record_id, basestring) and record_id.isdigit(),
-                isinstance(record_id, (int, float)),
-            ),
-        ):
-            return cls.query.get(int(record_id))
+        if isinstance(record_id, str) and record_id.isdigit():
+            record_id = int(record_id)
+        if isinstance(record_id, (int, float)):
+            return session.get(cls, int(record_id))
         return None
+
+
+async def init_db_engine(settings: Settings):
+    """
+    Initialize the database engine.
+    """
+    global _async_engine, _sync_engine, _async_session_factory, _sync_session_factory
+
+    # Create async engine
+    _async_engine = create_async_engine(
+        settings.DATABASE_URL_ASYNC,
+        echo=settings.DEBUG,
+    )
+
+    # Create sync engine for migrations and some operations
+    _sync_engine = create_engine(
+        settings.DATABASE_URL,
+        echo=settings.DEBUG,
+    )
+
+    # Create session factories
+    _async_session_factory = async_sessionmaker(
+        _async_engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+
+    _sync_session_factory = sessionmaker(
+        _sync_engine,
+        expire_on_commit=False,
+    )
+
+
+async def close_db_engine():
+    """
+    Close the database engine.
+    """
+    global _async_engine, _sync_engine
+    if _async_engine:
+        await _async_engine.dispose()
+    if _sync_engine:
+        _sync_engine.dispose()
+
+
+async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
+    """
+    Dependency that provides an async database session.
+    """
+    if _async_session_factory is None:
+        raise RuntimeError("Database not initialized. Call init_db_engine first.")
+
+    async with _async_session_factory() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+
+
+def get_sync_session() -> Session:
+    """
+    Get a synchronous database session.
+    """
+    if _sync_session_factory is None:
+        raise RuntimeError("Database not initialized. Call init_db_engine first.")
+
+    return _sync_session_factory()
+
+
+def get_sync_engine():
+    """Get the synchronous engine."""
+    return _sync_engine
 
 
 def postgres_create_user(username, conn, cur, password=None):
     """
     Create a postgres user, including a password if provided.
     """
-    from psycopg2.errors import DuplicateObject, ProgrammingError
+    from psycopg2.errors import DuplicateObject
     from psycopg2.sql import SQL, Identifier, Placeholder
 
-    # Run the CREATE USER
     try:
         if password:
             cur.execute(
@@ -132,8 +203,7 @@ def postgres_create_user(username, conn, cur, password=None):
             cur.execute(SQL("CREATE USER {}").format(Identifier(username)))
 
         print(f"User {username} created successfully")
-    except DuplicateObject as e:
-        # it's okay if user already exists
+    except DuplicateObject:
         print(f"User {username} already exists")
 
 
@@ -143,7 +213,6 @@ def postgres_create_database(conn, cur, database, user):
     """
     from psycopg2.sql import SQL, Identifier
 
-    # create database
     cur.execute(
         SQL("CREATE DATABASE {} OWNER {}").format(
             Identifier(database), Identifier(user)
@@ -152,20 +221,18 @@ def postgres_create_database(conn, cur, database, user):
     print("Database created successfully")
 
 
-def init_db(url):
+def init_db(url: str):
     """
-    Initialise a new database.
+    Initialize a new database (synchronous version for CLI).
     """
     if "postgresql" in url:
         import psycopg2
 
         try:
-            # Attempt to connect to an existing database using provided credentials
             engine = create_engine(url, echo=True)
             engine.connect().close()
 
-        except (OperationalError, psycopg2.OperationalError) as conn_err:
-            # Connection failed, so connect to default postgres DB and create new megaqc db and user
+        except (OperationalError, psycopg2.OperationalError):
             config_url = make_url(url)
             postgres_url = URL.create(
                 database="postgres",
@@ -179,9 +246,7 @@ def init_db(url):
 
             default_engine = create_engine(postgres_url, isolation_level="AUTOCOMMIT")
             conn = default_engine.raw_connection()
-            # conn.autocommit = True
 
-            # We use separate transactions here so that a failure in one doesn't affect the other
             with conn.cursor() as cur:
                 print("Initializing the postgres user")
                 postgres_create_user(
@@ -199,17 +264,16 @@ def init_db(url):
                     user=config_url.username,
                 )
 
-            # Ue engine with newly created db / user, if it fails again something bigger wrong
             engine = create_engine(url, echo=True)
             engine.connect().close()
     else:
         engine = create_engine(url, echo=True)
 
-    """Initializes the database."""
-    db.metadata.bind = engine
-    db.metadata.create_all()
+    # Import models to ensure they're registered
+    from megaqc.model import models  # noqa
+    from megaqc.user import models as user_models  # noqa
 
-    # Tell alembic that we're at the latest migration, since we just created everything from scratch
-    stamp()
+    # Create all tables
+    Base.metadata.create_all(engine)
 
     print("Initialized the database.")

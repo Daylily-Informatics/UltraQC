@@ -4,40 +4,32 @@ User models.
 """
 import datetime as dt
 import string
-import sys
 from builtins import str
+from typing import Optional
 
-from flask import current_app
-from flask_login import UserMixin
 from passlib.hash import argon2
 from passlib.utils import getrandstr, rng
 from sqlalchemy import (
-    TIMESTAMP,
     Boolean,
     Column,
     DateTime,
-    Float,
     ForeignKey,
     Integer,
-    Table,
     UnicodeText,
-    event,
     func,
     select,
-    update,
 )
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.ext.hybrid import hybrid_method, hybrid_property
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship
 
-from megaqc.database import CRUDMixin
-from megaqc.extensions import db
+from megaqc.database import Base
 
 letters = string.ascii_letters
 digits = string.digits
 
 
-class Role(db.Model, CRUDMixin):
+class Role(Base):
     """
     A role for a user.
     """
@@ -56,7 +48,7 @@ class Role(db.Model, CRUDMixin):
         return "<Role({name})>".format(name=self.name)
 
 
-class User(db.Model, CRUDMixin, UserMixin):
+class User(Base):
     """
     A user of the app.
     """
@@ -81,15 +73,17 @@ class User(db.Model, CRUDMixin, UserMixin):
     favourite_plots = relationship("PlotFavourite", back_populates="user")
     dashboards = relationship("Dashboard", back_populates="user")
 
-    def __init__(self, password=None, **kwargs):
+    def __init__(self, password: Optional[str] = None, active: Optional[bool] = None, **kwargs):
         """
         Create instance.
         """
-        db.Model.__init__(self, **kwargs)
+        super().__init__(**kwargs)
 
-        # Config adjusts the default active status
-        if "active" not in kwargs:
-            self.active = not current_app.config["USER_REGISTRATION_APPROVAL"]
+        # Default active status (can be overridden by settings)
+        if active is not None:
+            self.active = active
+        elif "active" not in kwargs:
+            self.active = True  # Default to active, settings can override
 
         self.salt = getrandstr(rng, digits + letters, 80)
         self.api_token = getrandstr(rng, digits + letters, 80)
@@ -98,50 +92,57 @@ class User(db.Model, CRUDMixin, UserMixin):
         else:
             self.password = None
 
-    def enforce_admin(self):
+    async def enforce_admin_async(self, session: AsyncSession):
         """
-        Enforce that the first user is an active admin.
+        Enforce that the first user is an active admin (async version).
 
         This is included as a method that isn't automatically called, because there are
         cases where we don't want this behaviour to happen, such as during testing.
         """
-        if db.session.query(User).count() == 0:
+        result = await session.execute(select(func.count(User.user_id)))
+        count = result.scalar()
+        if count == 0:
             self.is_admin = True
             self.active = True
 
-    # users = User.__table__
-    #     if target.user_id == 1:
-    #         connection.execute(users.update().where(users.c.user_id == 1).values(is_admin=True, active=True))
-
     @hybrid_property
     def full_name(self):
-        return self.first_name + " " + self.last_name
+        first = self.first_name or ""
+        last = self.last_name or ""
+        return f"{first} {last}".strip()
 
-    def reset_password(self):
+    def reset_password(self) -> str:
+        """Reset password to a random string and return it."""
         password = getrandstr(rng, digits + letters, 10)
         self.set_password(password)
         return password
 
-    def set_password(self, password):
+    def set_password(self, password: str):
         """
         Set password.
         """
         self.password = argon2.using(rounds=4).hash(password + self.salt)
 
-    def check_password(self, value):
+    def check_password(self, value: str) -> bool:
         """
         Check password.
         """
+        if not self.password or not self.salt:
+            return False
         return argon2.verify(value + self.salt, self.password)
 
-    def is_authenticated(self):
+    @property
+    def is_authenticated(self) -> bool:
+        """Check if user is authenticated."""
         return True
 
-    def is_active(self):
-        return self.active
+    @property
+    def is_anonymous(self) -> bool:
+        """Check if user is anonymous."""
+        return False
 
-    def get_id(self):
-        # must return unicode
+    def get_id(self) -> str:
+        """Get user ID as string."""
         return str(self.user_id)
 
     def __repr__(self):
@@ -149,11 +150,3 @@ class User(db.Model, CRUDMixin, UserMixin):
         Represent instance as a unique string.
         """
         return "<User({username!r})>".format(username=self.username)
-
-
-# @event.listens_for(User, 'after_insert')
-# def receive_after_insert(mapper, connection, target):
-#     # Here we enforce the business rule that the first user should be an active admin
-#     users = User.__table__
-#     if target.user_id == 1:
-#         connection.execute(users.update().where(users.c.user_id == 1).values(is_admin=True, active=True))

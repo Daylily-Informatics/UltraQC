@@ -1,5 +1,7 @@
+"""
+Tests for filter functionality.
+"""
 import pytest
-from pkg_resources import resource_stream
 
 from megaqc.model import models
 from megaqc.rest_api import schemas

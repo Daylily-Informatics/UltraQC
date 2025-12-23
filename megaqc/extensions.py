@@ -1,27 +1,47 @@
 # -*- coding: utf-8 -*-
 """
-Extensions module.
+Extensions module for FastAPI.
 
-Each extension is initialized in the app factory located in app.py.
+This module provides compatibility layers and shared utilities.
 """
 from pathlib import Path
+from typing import Optional
 
-from flask_caching import Cache
-from flask_debugtoolbar import DebugToolbarExtension
-from flask_login import LoginManager
-from flask_marshmallow import Marshmallow
-from flask_migrate import Migrate
-from flask_rest_jsonapi import Api as JsonApi
-from flask_restful import Api
-from flask_sqlalchemy import SQLAlchemy
-from flask_wtf.csrf import CSRFProtect
+from marshmallow import Schema
 
-csrf_protect = CSRFProtect()
-login_manager = LoginManager()
-db = SQLAlchemy()
-ma = Marshmallow()
-cache = Cache()
-debug_toolbar = DebugToolbarExtension()
-restful = Api(prefix="/rest_api/v1")
-migrate = Migrate(directory=str(Path(__file__).parent / "migrations"))
-json_api = JsonApi()
+# Migrations directory path
+MIGRATIONS_DIR = Path(__file__).parent / "migrations"
+
+
+# Simple in-memory cache (can be replaced with Redis or other backends)
+class SimpleCache:
+    """Simple in-memory cache implementation."""
+
+    def __init__(self):
+        self._cache = {}
+
+    def get(self, key: str):
+        return self._cache.get(key)
+
+    def set(self, key: str, value, timeout: Optional[int] = None):
+        self._cache[key] = value
+
+    def delete(self, key: str):
+        self._cache.pop(key, None)
+
+    def clear(self):
+        self._cache.clear()
+
+
+cache = SimpleCache()
+
+
+# Marshmallow for serialization
+class MarshmallowExtension:
+    """Wrapper for Marshmallow schemas."""
+
+    def __init__(self):
+        self.Schema = Schema
+
+
+ma = MarshmallowExtension()

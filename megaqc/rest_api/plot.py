@@ -1,9 +1,14 @@
+"""
+Plot generation utilities for the REST API.
+
+NOTE: This module has been updated for FastAPI/SQLAlchemy 2.0 compatibility.
+"""
 from __future__ import annotations
 
 import re
 from collections.abc import Sequence
 from datetime import datetime
-from typing import Any, Collection, Iterable, Iterator, Tuple
+from typing import Any, Collection, Iterable, Iterator, Optional, Tuple
 
 import numpy
 import numpy.typing as npt
@@ -13,11 +18,12 @@ from scipy.stats import f, norm, zscore
 from sklearn.covariance import EmpiricalCovariance
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import OneHotEncoder
-from sqlalchemy.orm.query import Query
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Query
 
-from megaqc.extensions import db
 from megaqc.model import models
-from megaqc.model.models import *
+from megaqc.model.models import Report, Sample, SampleData, SampleDataType
 from megaqc.rest_api.filters import build_filter_query
 
 
@@ -128,39 +134,52 @@ def univariate_trend_data(
 
 # Parameters correspond to fields in
 # `TrendInputSchema`
-def trend_data(
-    fields: Sequence[str], filter: Any, statistic: str, **kwargs
+async def trend_data(
+    session: AsyncSession,
+    fields: Sequence[str],
+    filter: Any,
+    statistic: str,
+    **kwargs
 ) -> Iterator[dict]:
     """
     Returns data suitable for a plotly plot.
+
+    Args:
+        session: Async database session
+        fields: List of field names or IDs to plot
+        filter: Filter criteria
+        statistic: Type of statistic to compute ('measurement' or 'iforest')
+        **kwargs: Additional arguments passed to the statistic function
+
+    Returns:
+        Iterator of plot data dictionaries
     """
     subquery = build_filter_query(filter)
-    plots = []
-    # Choose the columns to select, and further filter it down to samples with the column we want to plot
-    query = (
-        db.session.query(Sample)
-        .join(SampleData, isouter=True)
-        .join(SampleDataType, isouter=True)
-        .join(Report, Report.report_id == Sample.report_id, isouter=True)
-        .with_entities(
-            models.Sample.sample_name,
-            models.SampleDataType.nice_name,
-            models.Report.created_at,
-            models.SampleData.value,
+
+    # Build the query using SQLAlchemy 2.0 style
+    stmt = (
+        select(
+            Sample.sample_name,
+            SampleDataType.nice_name,
+            Report.created_at,
+            SampleData.value,
         )
-        .order_by(
-            models.SampleDataType.sample_data_type_id
-            # models.Report.created_at.asc(),
-        )
-        .filter(Sample.sample_id.in_(subquery))
+        .select_from(Sample)
+        .outerjoin(SampleData, Sample.sample_id == SampleData.sample_id)
+        .outerjoin(SampleDataType, SampleData.sample_data_type_id == SampleDataType.sample_data_type_id)
+        .outerjoin(Report, Report.report_id == Sample.report_id)
+        .where(Sample.sample_id.in_(subquery))
+        .order_by(SampleDataType.sample_data_type_id)
         .distinct()
     )
 
+    result = await session.execute(stmt)
+    query_data = result.all()
+
     if statistic == "measurement":
-        return univariate_trend_data(fields=fields, query=query, **kwargs)
+        return univariate_trend_data(fields=fields, query_data=query_data, **kwargs)
     elif statistic == "iforest":
-        return isolation_forest_trend(fields=fields, query=query, **kwargs)
-        # return hotelling_trend_data(fields=fields, query=query, **kwargs)
+        return isolation_forest_trend(fields=fields, query_data=query_data, **kwargs)
     else:
         raise ValueError("Invalid transform!")
 

@@ -1,26 +1,20 @@
 # -*- coding: utf-8 -*-
 """
 Public section, including homepage and signup.
+
+Refactored to use FastAPI with Jinja2 templates.
 """
-from builtins import bytes
+import json
 from collections import OrderedDict
+from datetime import timedelta
+from typing import Optional
 from urllib.parse import unquote_plus
 
-from flask import (
-    Blueprint,
-    Request,
-    abort,
-    current_app,
-    flash,
-    json,
-    redirect,
-    render_template,
-    request,
-    url_for,
-)
-from flask_login import current_user, login_required, login_user, logout_user
-from future import standard_library
-from sqlalchemy.sql import distinct, func
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, Response, status
+from fastapi.responses import HTMLResponse, RedirectResponse
+from pydantic import ValidationError
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from megaqc.api.utils import (
     aggregate_new_parameters,
@@ -34,331 +28,582 @@ from megaqc.api.utils import (
     get_samples,
     get_user_filters,
 )
-from megaqc.extensions import db, login_manager
-from megaqc.model.models import PlotCategory, PlotConfig, PlotData, Report
+from megaqc.app import get_templates
+from megaqc.auth import (
+    ALGORITHM,
+    create_access_token,
+    get_current_active_user,
+    get_current_user,
+)
+from megaqc.database import get_async_session
 from megaqc.public.forms import LoginForm
 from megaqc.user.forms import RegisterForm
 from megaqc.user.models import User
-from megaqc.utils import flash_errors, settings
 
-standard_library.install_aliases()
-
-
-blueprint = Blueprint("public", __name__, static_folder="../static")
+public_router = APIRouter(tags=["public"])
 
 
-@login_manager.user_loader
-def load_user(user_id):
-    """
-    Load user by ID.
-    """
-    return User.query.get(int(user_id))
-
-
-@blueprint.route("/", methods=["GET", "POST"])
-def home():
+@public_router.get("/", response_class=HTMLResponse)
+async def home(
+    request: Request,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: Optional[User] = Depends(get_current_user),
+):
     """
     Home page.
     """
-    return render_template(
+    templates = get_templates()
+    return templates.TemplateResponse(
         "public/home.html",
-        num_samples=get_samples(count=True),
-        num_reports=get_reports_data(count=True),
-        num_uploads_processing=get_queued_uploads(
-            count=True, filter_cats=["NOT TREATED", "IN TREATMENT"]
-        ),
+        {
+            "request": request,
+            "current_user": current_user,
+            "num_samples": await get_samples(session, count=True),
+            "num_reports": await get_reports_data(session, count=True),
+            "num_uploads_processing": await get_queued_uploads(
+                session, count=True, filter_cats=["NOT TREATED", "IN TREATMENT"]
+            ),
+        },
     )
 
 
-@blueprint.route("/login/", methods=["GET", "POST"])
-def login():
+@public_router.get("/login/", response_class=HTMLResponse)
+async def login_page(
+    request: Request,
+    next: Optional[str] = Query(None),
+    flash_message: Optional[str] = Query(None),
+    flash_category: Optional[str] = Query(None),
+):
     """
-    Log in.
+    Login page (GET).
     """
-    form = LoginForm(request.form)
-    # Handle logging in
-    if request.method == "POST":
-        if form.validate_on_submit():
-            login_user(form.user)
-            flash(
-                "Welcome {}! You are now logged in.".format(current_user.first_name),
-                "success",
-            )
-            redirect_url = request.args.get("next") or url_for("public.home")
-            return redirect(redirect_url)
-        else:
-            flash_errors(form)
-    return render_template("public/login.html", form=form)
+    templates = get_templates()
+    return templates.TemplateResponse(
+        "public/login.html",
+        {
+            "request": request,
+            "form": {},
+            "flash_message": flash_message,
+            "flash_category": flash_category,
+        },
+    )
 
 
-@blueprint.route("/logout/")
-@login_required
-def logout():
+@public_router.post("/login/")
+async def login(
+    request: Request,
+    response: Response,
+    username: str = Form(...),
+    password: str = Form(...),
+    next: Optional[str] = Query(None),
+    session: AsyncSession = Depends(get_async_session),
+):
+    """
+    Handle login (POST).
+    """
+    templates = get_templates()
+
+    # Validate form
+    try:
+        form = LoginForm(username=username, password=password)
+    except ValidationError as e:
+        return templates.TemplateResponse(
+            "public/login.html",
+            {"request": request, "form": {"username": username}, "errors": e.errors()},
+        )
+
+    # Find user
+    result = await session.execute(select(User).where(User.username == form.username))
+    user = result.scalar_one_or_none()
+
+    if not user:
+        return templates.TemplateResponse(
+            "public/login.html",
+            {"request": request, "form": {"username": username}, "error": "Unknown username"},
+        )
+
+    if not user.check_password(form.password):
+        return templates.TemplateResponse(
+            "public/login.html",
+            {"request": request, "form": {"username": username}, "error": "Invalid password"},
+        )
+
+    if not user.active:
+        return templates.TemplateResponse(
+            "public/login.html",
+            {"request": request, "form": {"username": username}, "error": "User not activated"},
+        )
+
+    # Create session token
+    settings = request.state.settings
+    access_token = create_access_token(
+        data={"sub": user.user_id}, settings=settings, expires_delta=timedelta(days=7)
+    )
+
+    # Redirect with session cookie
+    redirect_url = next or "/"
+    response = RedirectResponse(url=redirect_url, status_code=status.HTTP_302_FOUND)
+    response.set_cookie(
+        key="session_token",
+        value=access_token,
+        httponly=True,
+        max_age=7 * 24 * 60 * 60,  # 7 days
+        samesite="lax",
+    )
+    return response
+
+
+@public_router.get("/logout/")
+async def logout(response: Response):
     """
     Logout.
     """
-    logout_user()
-    flash("You are logged out.", "info")
-    return redirect(url_for("public.home"))
+    response = RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
+    response.delete_cookie(key="session_token")
+    return response
 
 
-@blueprint.route("/register/", methods=["GET", "POST"])
-def register():
+@public_router.get("/register/", response_class=HTMLResponse)
+async def register_page(request: Request):
     """
-    Register new user.
+    Registration page (GET).
     """
-    form = RegisterForm(request.form)
-    if form.validate_on_submit():
-        u = User(
-            username=form.username.data,
-            email=form.email.data,
-            password=form.password.data,
-            first_name=form.first_name.data,
-            last_name=form.last_name.data,
+    templates = get_templates()
+    return templates.TemplateResponse(
+        "public/register.html",
+        {"request": request, "form": {}},
+    )
+
+
+@public_router.post("/register/")
+async def register(
+    request: Request,
+    response: Response,
+    username: str = Form(...),
+    email: str = Form(...),
+    password: str = Form(...),
+    confirm: str = Form(...),
+    first_name: Optional[str] = Form(None),
+    last_name: Optional[str] = Form(None),
+    session: AsyncSession = Depends(get_async_session),
+):
+    """
+    Handle registration (POST).
+    """
+    templates = get_templates()
+
+    # Validate form
+    try:
+        form = RegisterForm(
+            username=username,
+            email=email,
+            password=password,
+            confirm=confirm,
+            first_name=first_name,
+            last_name=last_name,
         )
-        u.enforce_admin()
-        u.save()
-        if u.active:
-            flash("Thanks for registering! You're now logged in.", "success")
-            login_user(u)
-        else:
-            flash(
-                "Thanks for registering! You will now need to wait for your admin to approve this account.",
-                "success",
-            )
-        return redirect(url_for("public.home"))
-    else:
-        flash_errors(form)
-    return render_template("public/register.html", form=form)
+    except ValidationError as e:
+        return templates.TemplateResponse(
+            "public/register.html",
+            {"request": request, "form": {"username": username, "email": email}, "errors": e.errors()},
+        )
+
+    # Check for existing user
+    result = await session.execute(select(User).where(User.username == form.username))
+    if result.scalar_one_or_none():
+        return templates.TemplateResponse(
+            "public/register.html",
+            {"request": request, "form": {"username": username, "email": email}, "error": "Username already registered"},
+        )
+
+    result = await session.execute(select(User).where(User.email == form.email))
+    if result.scalar_one_or_none():
+        return templates.TemplateResponse(
+            "public/register.html",
+            {"request": request, "form": {"username": username, "email": email}, "error": "Email already registered"},
+        )
+
+    # Create user
+    settings = request.state.settings
+    user = User(
+        username=form.username,
+        email=form.email,
+        password=form.password,
+        first_name=form.first_name,
+        last_name=form.last_name,
+    )
+    await user.enforce_admin_async(session)
+    session.add(user)
+    await session.commit()
+
+    if user.active:
+        # Auto-login for first user
+        access_token = create_access_token(
+            data={"sub": user.user_id}, settings=settings, expires_delta=timedelta(days=7)
+        )
+        response = RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
+        response.set_cookie(
+            key="session_token",
+            value=access_token,
+            httponly=True,
+            max_age=7 * 24 * 60 * 60,
+            samesite="lax",
+        )
+        return response
+
+    return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
 
 
-@blueprint.route("/about/")
-def about():
+@public_router.get("/about/", response_class=HTMLResponse)
+async def about(
+    request: Request,
+    current_user: Optional[User] = Depends(get_current_user),
+):
     """
     About page.
     """
-    form = LoginForm(request.form)
-    return render_template("public/about.html", form=form)
+    templates = get_templates()
+    return templates.TemplateResponse(
+        "public/about.html",
+        {"request": request, "current_user": current_user},
+    )
 
 
-@blueprint.route("/plot_type/")
-def choose_plot_type():
+@public_router.get("/plot_type/", response_class=HTMLResponse)
+async def choose_plot_type(
+    request: Request,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: Optional[User] = Depends(get_current_user),
+):
     """
     Choose plot type.
     """
-    return render_template("public/plot_type.html", num_samples=get_samples(count=True))
+    templates = get_templates()
+    return templates.TemplateResponse(
+        "public/plot_type.html",
+        {
+            "request": request,
+            "current_user": current_user,
+            "num_samples": await get_samples(session, count=True),
+        },
+    )
 
 
-@blueprint.route("/report_plot/")
-@login_required
-def report_plot():
-    # Get the fields from the add-new-filters form
-    return_data = aggregate_new_parameters(current_user, [], False)
-    sample_filters = order_sample_filters()
-    return render_template(
+@public_router.get("/report_plot/", response_class=HTMLResponse)
+async def report_plot(
+    request: Request,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Report plot page."""
+    templates = get_templates()
+    return_data = await aggregate_new_parameters(session, current_user, [], False)
+    sample_filters = await order_sample_filters(session, current_user)
+    return templates.TemplateResponse(
         "public/report_plot.html",
-        db=db,
-        User=User,
-        user_token=current_user.api_token,
-        sample_filters=sample_filters,
-        num_samples=return_data[0],
-        report_fields_json=json.dumps(return_data[1]),
-        sample_fields_json=json.dumps(return_data[2]),
-        report_plot_types=return_data[3],
+        {
+            "request": request,
+            "current_user": current_user,
+            "user_token": current_user.api_token,
+            "sample_filters": sample_filters,
+            "num_samples": return_data[0],
+            "report_fields_json": json.dumps(return_data[1]),
+            "sample_fields_json": json.dumps(return_data[2]),
+            "report_plot_types": return_data[3],
+        },
     )
 
 
-@blueprint.route("/queued_uploads/")
-@login_required
-def queued_uploads():
-    return render_template(
+@public_router.get("/queued_uploads/", response_class=HTMLResponse)
+async def queued_uploads(
+    request: Request,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Queued uploads page."""
+    templates = get_templates()
+    return templates.TemplateResponse(
         "users/queued_uploads.html",
-        db=db,
-        User=User,
-        user_token=current_user.api_token,
-        uploads=get_queued_uploads(),
+        {
+            "request": request,
+            "current_user": current_user,
+            "user_token": current_user.api_token,
+            "uploads": await get_queued_uploads(session),
+        },
     )
 
 
-@blueprint.route("/dashboards/")
-@login_required
-def list_dashboard():
-    """
-    Create a new dashboard.
-    """
-    return render_template(
+@public_router.get("/dashboards/", response_class=HTMLResponse)
+async def list_dashboard(
+    request: Request,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_active_user),
+):
+    """List dashboards."""
+    templates = get_templates()
+    return templates.TemplateResponse(
         "users/dashboards.html",
-        dashboards=get_dashboards(User),
-        user_token=current_user.api_token,
+        {
+            "request": request,
+            "current_user": current_user,
+            "dashboards": await get_dashboards(session, current_user),
+            "user_token": current_user.api_token,
+        },
     )
 
 
-@blueprint.route("/dashboard/create/")
-@blueprint.route("/dashboard/edit/<dashboard_id>")
-@login_required
-def create_dashboard(dashboard_id=None):
-    """
-    Create a new dashboard.
-    """
-    return render_template(
+@public_router.get("/dashboard/create/", response_class=HTMLResponse)
+async def create_dashboard_page(
+    request: Request,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Create dashboard page."""
+    templates = get_templates()
+    return templates.TemplateResponse(
         "users/create_dashboard.html",
-        dashboard_id=dashboard_id,
-        favourite_plots=get_plot_favourites(User),
-        user_token=current_user.api_token,
+        {
+            "request": request,
+            "current_user": current_user,
+            "dashboard_id": None,
+            "favourite_plots": await get_plot_favourites(session, current_user),
+            "user_token": current_user.api_token,
+        },
     )
 
 
-@blueprint.route("/dashboard/view/<dashboard_id>")
-@blueprint.route("/dashboard/view/<dashboard_id>/raw")
-@login_required
-def view_dashboard(dashboard_id):
-    """
-    Create a new dashboard.
-    """
-    dashboard = get_dashboard_data(current_user, dashboard_id)
+@public_router.get("/dashboard/edit/{dashboard_id}", response_class=HTMLResponse)
+async def edit_dashboard_page(
+    request: Request,
+    dashboard_id: int,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Edit dashboard page."""
+    templates = get_templates()
+    return templates.TemplateResponse(
+        "users/create_dashboard.html",
+        {
+            "request": request,
+            "current_user": current_user,
+            "dashboard_id": dashboard_id,
+            "favourite_plots": await get_plot_favourites(session, current_user),
+            "user_token": current_user.api_token,
+        },
+    )
+
+
+@public_router.get("/dashboard/view/{dashboard_id}", response_class=HTMLResponse)
+@public_router.get("/dashboard/view/{dashboard_id}/raw", response_class=HTMLResponse)
+async def view_dashboard(
+    request: Request,
+    dashboard_id: int,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_active_user),
+):
+    """View dashboard."""
+    templates = get_templates()
+    dashboard = await get_dashboard_data(session, current_user, dashboard_id)
     if dashboard is None:
-        abort(404)
-    return render_template(
+        raise HTTPException(status_code=404, detail="Dashboard not found")
+    return templates.TemplateResponse(
         "public/dashboard.html",
-        dashboard_id=dashboard_id,
-        dashboard=dashboard,
-        raw=request.path.endswith("/raw"),
-        user_token=current_user.api_token,
+        {
+            "request": request,
+            "current_user": current_user,
+            "dashboard_id": dashboard_id,
+            "dashboard": dashboard,
+            "raw": str(request.url.path).endswith("/raw"),
+            "user_token": current_user.api_token,
+        },
     )
 
 
-@blueprint.route("/plot_favourites/")
-@login_required
-def plot_favourites():
-    """
-    View and edit saved plots.
-    """
-    return render_template(
+@public_router.get("/plot_favourites/", response_class=HTMLResponse)
+async def plot_favourites(
+    request: Request,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_active_user),
+):
+    """View and edit saved plots."""
+    templates = get_templates()
+    return templates.TemplateResponse(
         "users/plot_favourites.html",
-        favourite_plots=get_plot_favourites(User),
-        user_token=current_user.api_token,
+        {
+            "request": request,
+            "current_user": current_user,
+            "favourite_plots": await get_plot_favourites(session, current_user),
+            "user_token": current_user.api_token,
+        },
     )
 
 
-@blueprint.route("/plot_favourite/<fav_id>")
-@blueprint.route("/plot_favourite/<fav_id>/raw")
-@login_required
-def plot_favourite(fav_id):
-    """
-    View and edit saved plots.
-    """
-    return render_template(
+@public_router.get("/plot_favourite/{fav_id}", response_class=HTMLResponse)
+@public_router.get("/plot_favourite/{fav_id}/raw", response_class=HTMLResponse)
+async def plot_favourite(
+    request: Request,
+    fav_id: int,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_active_user),
+):
+    """View a saved plot."""
+    templates = get_templates()
+    return templates.TemplateResponse(
         "users/plot_favourite.html",
-        plot_data=get_favourite_plot_data(current_user, fav_id),
-        raw=request.path.endswith("/raw"),
-        user_token=current_user.api_token,
+        {
+            "request": request,
+            "current_user": current_user,
+            "plot_data": await get_favourite_plot_data(session, current_user, fav_id),
+            "raw": str(request.url.path).endswith("/raw"),
+            "user_token": current_user.api_token,
+        },
     )
 
 
-@blueprint.route("/edit_filters/")
-@login_required
-def edit_filters():
-    """
-    Edit saved filters.
-    """
-    sample_filters = order_sample_filters()
+@public_router.get("/edit_filters/", response_class=HTMLResponse)
+async def edit_filters(
+    request: Request,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Edit saved filters."""
+    templates = get_templates()
+    sample_filters = await order_sample_filters(session, current_user)
     sample_filter_counts = {}
     for sfg in sample_filters:
         sample_filter_counts[sfg] = {}
         for sf in sample_filters[sfg]:
-            sample_filter_counts[sf["id"]] = get_samples(
-                filters=sf.get("sample_filter_data", []), count=True
+            sample_filter_counts[sf["id"]] = await get_samples(
+                session, filters=sf.get("sample_filter_data", []), count=True
             )
-    return render_template(
+    return templates.TemplateResponse(
         "users/organize_filters.html",
-        sample_filters=sample_filters,
-        sample_filter_counts=sample_filter_counts,
-        user_token=current_user.api_token,
-        num_samples=get_samples(count=True),
+        {
+            "request": request,
+            "current_user": current_user,
+            "sample_filters": sample_filters,
+            "sample_filter_counts": sample_filter_counts,
+            "user_token": current_user.api_token,
+            "num_samples": await get_samples(session, count=True),
+        },
     )
 
 
-def order_sample_filters():
+async def order_sample_filters(session: AsyncSession, current_user: User) -> OrderedDict:
+    """Order sample filters by set."""
     sample_filters = OrderedDict()
     sample_filters["Global"] = [{"id": -1, "set": "Global", "name": "All Samples"}]
-    for sf in get_user_filters(current_user):
+    for sf in await get_user_filters(session, current_user):
         if sf["set"] not in sample_filters:
             sample_filters[sf["set"]] = list()
         sample_filters[sf["set"]].append(sf)
     return sample_filters
 
 
-@blueprint.route("/distributions/")
-@login_required
-def distributions():
-    # Get the fields from the add-new-filters form
-    return_data = aggregate_new_parameters(current_user, [], False)
-    sample_filters = order_sample_filters()
-    return render_template(
+@public_router.get("/distributions/", response_class=HTMLResponse)
+async def distributions(
+    request: Request,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Distributions page."""
+    templates = get_templates()
+    return_data = await aggregate_new_parameters(session, current_user, [], False)
+    sample_filters = await order_sample_filters(session, current_user)
+    return templates.TemplateResponse(
         "public/distributions.html",
-        db=db,
-        User=User,
-        user_token=current_user.api_token,
-        sample_filters=sample_filters,
-        num_samples=return_data[0],
-        report_fields=return_data[1],
-        sample_fields=return_data[2],
-        report_fields_json=json.dumps(return_data[1]),
-        sample_fields_json=json.dumps(return_data[2]),
+        {
+            "request": request,
+            "current_user": current_user,
+            "user_token": current_user.api_token,
+            "sample_filters": sample_filters,
+            "num_samples": return_data[0],
+            "report_fields": return_data[1],
+            "sample_fields": return_data[2],
+            "report_fields_json": json.dumps(return_data[1]),
+            "sample_fields_json": json.dumps(return_data[2]),
+        },
     )
 
 
-@blueprint.route("/trends/")
-@login_required
-def trends():
-    # Get the fields from the add-new-filters form
-    return render_template("public/react.html", entrypoint="trend")
+@public_router.get("/trends/", response_class=HTMLResponse)
+async def trends(
+    request: Request,
+    current_user: User = Depends(get_current_active_user),
+):
+    """Trends page (React)."""
+    templates = get_templates()
+    return templates.TemplateResponse(
+        "public/react.html",
+        {"request": request, "current_user": current_user, "entrypoint": "trend"},
+    )
 
 
-@blueprint.route("/admin/")
-@login_required
-def admin():
-    # Get the fields from the add-new-filters form
-    return render_template("public/react.html", entrypoint="admin")
+@public_router.get("/admin/", response_class=HTMLResponse)
+async def admin(
+    request: Request,
+    current_user: User = Depends(get_current_active_user),
+):
+    """Admin page (React)."""
+    templates = get_templates()
+    return templates.TemplateResponse(
+        "public/react.html",
+        {"request": request, "current_user": current_user, "entrypoint": "admin"},
+    )
 
 
-@blueprint.route("/comparisons/")
-@login_required
-def comparisons():
-    # Get the fields from the add-new-filters form
-    return_data = aggregate_new_parameters(current_user, [], False)
-    sample_filters = order_sample_filters()
-    return render_template(
+@public_router.get("/comparisons/", response_class=HTMLResponse)
+async def comparisons(
+    request: Request,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Comparisons page."""
+    templates = get_templates()
+    return_data = await aggregate_new_parameters(session, current_user, [], False)
+    sample_filters = await order_sample_filters(session, current_user)
+    return templates.TemplateResponse(
         "public/comparisons.html",
-        db=db,
-        User=User,
-        user_token=current_user.api_token,
-        sample_filters=sample_filters,
-        num_samples=return_data[0],
-        report_fields=return_data[1],
-        sample_fields=return_data[2],
-        report_fields_json=json.dumps(return_data[1]),
-        sample_fields_json=json.dumps(return_data[2]),
+        {
+            "request": request,
+            "current_user": current_user,
+            "user_token": current_user.api_token,
+            "sample_filters": sample_filters,
+            "num_samples": return_data[0],
+            "report_fields": return_data[1],
+            "sample_fields": return_data[2],
+            "report_fields_json": json.dumps(return_data[1]),
+            "sample_fields_json": json.dumps(return_data[2]),
+        },
     )
 
 
-@blueprint.route("/edit_reports/")
-@login_required
-def edit_reports():
-    # Get the fields from the add-new-filters form
+@public_router.get("/edit_reports/", response_class=HTMLResponse)
+async def edit_reports(
+    request: Request,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Edit reports page."""
+    templates = get_templates()
     user_id = None
     if not current_user.is_admin:
         user_id = current_user.user_id
-    return_data = get_reports_data(False, user_id)
-    return render_template(
+    return_data = await get_reports_data(session, count=False, user_id=user_id)
+    return templates.TemplateResponse(
         "public/reports_management.html",
-        report_data=return_data,
-        report_meta_fields=get_report_metadata_fields(),
-        api_token=current_user.api_token,
+        {
+            "request": request,
+            "current_user": current_user,
+            "report_data": return_data,
+            "report_meta_fields": await get_report_metadata_fields(session),
+            "api_token": current_user.api_token,
+        },
     )
 
 
-@blueprint.route("/not_implemented")
-def not_implemented():
-    flash("Sorry, this feature is not yet implemented!", "danger")
-    return redirect(request.referrer)
+@public_router.get("/not_implemented")
+async def not_implemented(request: Request):
+    """Not implemented placeholder."""
+    referer = request.headers.get("referer", "/")
+    return RedirectResponse(url=referer, status_code=status.HTTP_302_FOUND)

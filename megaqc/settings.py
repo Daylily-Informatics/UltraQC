@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Application configuration.
+Application configuration using Pydantic Settings for FastAPI.
 """
 from __future__ import print_function
 
@@ -8,182 +8,201 @@ import logging
 import os
 import sys
 import tempfile
-from builtins import object
+from pathlib import Path
+from typing import Optional
 
 import yaml
-from environs import Env
+from pydantic import computed_field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from megaqc.scheduler import upload_reports_job
-
-env = Env()
+# Flag for database check on startup
 run_db_check = False
 
 
-class Config(object):
+class Settings(BaseSettings):
     """
-    Base configuration.
+    Base configuration using Pydantic Settings.
     """
 
-    SECRET_KEY = env.str("MEGAQC_SECRET", "secret-key")  # TODO: Change me
-    APP_DIR = os.path.abspath(os.path.dirname(__file__))  # This directory
-    PROJECT_ROOT = os.path.abspath(os.path.join(APP_DIR, os.pardir))
-    UPLOAD_FOLDER = os.path.join(PROJECT_ROOT, "uploads")
-    DEBUG_TB_ENABLED = False  # Disable Debug toolbar
-    DEBUG_TB_INTERCEPT_REDIRECTS = False
-    CACHE_TYPE = "simple"  # Can be "memcached", "redis", etc.
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
-    JOBS = [
-        {"id": "job1", "func": upload_reports_job, "trigger": "interval", "seconds": 30}
-    ]
-    SCHEDULER_API_ENABLED = True
-    EXTRA_CONFIG = env("MEGAQC_CONFIG", None)
-    SERVER_NAME = None
-    DB_PATH = None
-    LOG_LEVEL = logging.INFO
-    SQLALCHEMY_DBMS = None
-    SQLALCHEMY_HOST = "localhost:5432"
-    SQLALCHEMY_USER = "megaqc_user"
-    SQLALCHEMY_PASS = ""
-    SQLALCHEMY_DATABASE = "megaqc"
-    # If this is true, every user after the first has to be approved before it becomes active
-    USER_REGISTRATION_APPROVAL = True
+    model_config = SettingsConfigDict(
+        env_prefix="MEGAQC_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
-    def __init__(self):
+    # Core settings
+    SECRET_KEY: str = "secret-key"  # TODO: Change me in production
+    DEBUG: bool = False
+    TESTING: bool = False
+    ENV: str = "dev"
+
+    # Paths
+    APP_DIR: Path = Path(__file__).parent.absolute()
+    PROJECT_ROOT: Path = Path(__file__).parent.parent.absolute()
+
+    @computed_field
+    @property
+    def UPLOAD_FOLDER(self) -> str:
+        return str(self.PROJECT_ROOT / "uploads")
+
+    # Logging
+    LOG_LEVEL: int = logging.INFO
+
+    # Database settings
+    DB_DBMS: str = "sqlite"
+    DB_HOST: str = "localhost"
+    DB_PORT: int = 5432
+    DB_USER: str = "megaqc_user"
+    DB_PASS: str = ""
+    DB_NAME: str = "megaqc"
+    DB_PATH: Optional[str] = None
+
+    # Server settings
+    SERVER_NAME: Optional[str] = None
+
+    # Scheduler settings
+    SCHEDULER_ENABLED: bool = True
+    SCHEDULER_INTERVAL_SECONDS: int = 30
+
+    # User registration
+    USER_REGISTRATION_APPROVAL: bool = True
+
+    # Extra config file
+    EXTRA_CONFIG: Optional[str] = None
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # Load extra config from YAML if provided
         if self.EXTRA_CONFIG:
+            self._load_extra_config()
+
+    def _load_extra_config(self):
+        """Load additional configuration from YAML file."""
+        if self.EXTRA_CONFIG and os.path.exists(self.EXTRA_CONFIG):
             with open(self.EXTRA_CONFIG) as f:
-                self.extra_conf = yaml.load(f, Loader=yaml.FullLoader)
-                for key in self.extra_conf:
-                    if key in Config.__dict__:
-                        setattr(self, key, self.extra_conf[key])
-                        if key != "SQLALCHEMY_PASS":
-                            print("Setting {} to {}".format(key, self.extra_conf[key]))
+                extra_conf = yaml.load(f, Loader=yaml.FullLoader)
+                for key, value in extra_conf.items():
+                    if hasattr(self, key):
+                        setattr(self, key, value)
+                        if key != "DB_PASS":
+                            print(f"Setting {key} to {value}")
                         else:
-                            print("Setting {} to {}".format(key, "********"))
+                            print(f"Setting {key} to ********")
                     else:
-                        print("Key '{}' not in '{}'".format(key, self.__dict__))
+                        print(f"Key '{key}' not a valid setting")
 
-    def update_db_uri(self):
-        if self.SQLALCHEMY_DBMS == "sqlite":
-            self.SQLALCHEMY_DATABASE_URI = "{}:///{}".format(
-                self.SQLALCHEMY_DBMS, self.DB_PATH
-            )
-            self.SQLALCHEMY_DATABASE_URI_SAN = self.SQLALCHEMY_DATABASE_URI
-        elif self.SQLALCHEMY_HOST.startswith("/"):
-            # If the host starts with a /, it's probably a unix socket, which has a different URL format
-            self.SQLALCHEMY_DATABASE_URI = "{}://{}:{}@/{}?host={}".format(
-                self.SQLALCHEMY_DBMS,
-                self.SQLALCHEMY_USER,
-                self.SQLALCHEMY_PASS,
-                self.SQLALCHEMY_DATABASE,
-                self.SQLALCHEMY_HOST,
-            )
-            self.SQLALCHEMY_DATABASE_URI_SAN = "{}://{}:{}@/{}?host={}".format(
-                self.SQLALCHEMY_DBMS,
-                self.SQLALCHEMY_USER,
-                "***" if self.SQLALCHEMY_PASS else "",
-                self.SQLALCHEMY_DATABASE,
-                self.SQLALCHEMY_HOST,
-            )
+    @computed_field
+    @property
+    def DATABASE_URL(self) -> str:
+        """Build database URL based on settings."""
+        if self.DB_DBMS == "sqlite":
+            db_path = self.DB_PATH or str(self.PROJECT_ROOT / "megaqc.db")
+            return f"sqlite:///{db_path}"
+        elif self.DB_HOST.startswith("/"):
+            # Unix socket
+            return f"{self.DB_DBMS}://{self.DB_USER}:{self.DB_PASS}@/{self.DB_NAME}?host={self.DB_HOST}"
         else:
-            self.SQLALCHEMY_DATABASE_URI = "{}://{}:{}@{}/{}".format(
-                self.SQLALCHEMY_DBMS,
-                self.SQLALCHEMY_USER,
-                self.SQLALCHEMY_PASS,
-                self.SQLALCHEMY_HOST,
-                self.SQLALCHEMY_DATABASE,
-            )
-            self.SQLALCHEMY_DATABASE_URI_SAN = "{}://{}:{}@{}/{}".format(
-                self.SQLALCHEMY_DBMS,
-                self.SQLALCHEMY_USER,
-                "***" if self.SQLALCHEMY_PASS else "",
-                self.SQLALCHEMY_HOST,
-                self.SQLALCHEMY_DATABASE,
-            )
+            return f"{self.DB_DBMS}://{self.DB_USER}:{self.DB_PASS}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+
+    @computed_field
+    @property
+    def DATABASE_URL_ASYNC(self) -> str:
+        """Build async database URL for async SQLAlchemy."""
+        if self.DB_DBMS == "sqlite":
+            db_path = self.DB_PATH or str(self.PROJECT_ROOT / "megaqc.db")
+            return f"sqlite+aiosqlite:///{db_path}"
+        elif self.DB_DBMS == "postgresql":
+            if self.DB_HOST.startswith("/"):
+                return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASS}@/{self.DB_NAME}?host={self.DB_HOST}"
+            else:
+                return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASS}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+        return self.DATABASE_URL
+
+    @property
+    def DATABASE_URL_SANITIZED(self) -> str:
+        """Get database URL with password hidden."""
+        url = self.DATABASE_URL
+        if self.DB_PASS:
+            return url.replace(self.DB_PASS, "***")
+        return url
 
 
-class ProdConfig(Config):
+class ProdSettings(Settings):
     """
     Production configuration.
     """
 
-    ENV = "prod"
-    DEBUG = False
-    SQLALCHEMY_DBMS = "postgresql"
-    if "DB_UNIX_SOCKET" in os.environ:
-        # Unix sockets dont have a port
-        SQLALCHEMY_HOST = os.environ["DB_UNIX_SOCKET"]
-    else:
-        SQLALCHEMY_HOST = "{}:{}".format(
-            env.str("DB_HOST", "localhost"), env.int("DB_PORT", "5432")
-        )
-    SQLALCHEMY_USER = env.str("DB_USER", "megaqc")
-    SQLALCHEMY_PASS = env.str("DB_PASS", "megaqcpswd")
-    SQLALCHEMY_DATABASE = env.str("DB_NAME", "megaqc")
-    DEBUG_TB_ENABLED = False  # Disable Debug toolbar
+    ENV: str = "prod"
+    DEBUG: bool = False
+    DB_DBMS: str = "postgresql"
+    DB_HOST: str = os.environ.get("DB_UNIX_SOCKET", os.environ.get("DB_HOST", "localhost"))
+    DB_PORT: int = int(os.environ.get("DB_PORT", "5432"))
+    DB_USER: str = os.environ.get("DB_USER", "megaqc")
+    DB_PASS: str = os.environ.get("DB_PASS", "megaqcpswd")
+    DB_NAME: str = os.environ.get("DB_NAME", "megaqc")
 
-    def __init__(self):
-        super(ProdConfig, self).__init__()
-        self.update_db_uri()
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         # Log to the terminal
         print(" * Environment: Prod", file=sys.stderr)
-        print(" * Database type: {}".format(self.SQLALCHEMY_DBMS), file=sys.stderr)
-        print(
-            " * Database path: {}".format(self.SQLALCHEMY_DATABASE_URI_SAN),
-            file=sys.stderr,
-        )
+        print(f" * Database type: {self.DB_DBMS}", file=sys.stderr)
+        print(f" * Database path: {self.DATABASE_URL_SANITIZED}", file=sys.stderr)
 
 
-class DevConfig(Config):
+class DevSettings(Settings):
     """
     Development configuration.
     """
 
-    ENV = "dev"
-    DEBUG = True
-    SQLALCHEMY_ECHO = True
-    SQLALCHEMY_DBMS = "sqlite"
-    DB_NAME = "megaqc.db"
-    # Put the db file in project root
-    DB_PATH = os.path.join(Config.PROJECT_ROOT, DB_NAME)
-    DEBUG_TB_ENABLED = True
-    CACHE_TYPE = "simple"  # Can be "memcached", "redis", etc.
-    WTF_CSRF_ENABLED = False  # Allows form testing
-    SQLALCHEMY_RECORD_QUERIES = True
-    LOG_LEVEL = logging.DEBUG
+    ENV: str = "dev"
+    DEBUG: bool = True
+    DB_DBMS: str = "sqlite"
+    LOG_LEVEL: int = logging.DEBUG
 
-    def __init__(self):
-        super(DevConfig, self).__init__()
-        self.update_db_uri()
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         # Log to the terminal
         print(" * Environment: dev", file=sys.stderr)
-        print(" * Database type: {}".format(self.SQLALCHEMY_DBMS), file=sys.stderr)
-        print(
-            " * Database path: {}".format(self.SQLALCHEMY_DATABASE_URI_SAN),
-            file=sys.stderr,
-        )
+        print(f" * Database type: {self.DB_DBMS}", file=sys.stderr)
+        print(f" * Database path: {self.DATABASE_URL_SANITIZED}", file=sys.stderr)
 
 
-class TestConfig(Config):
+class TestSettings(Settings):
     """
     Test configuration.
     """
 
-    DEBUG = True
-    TESTING = True
-    SQLALCHEMY_DBMS = "sqlite"
-    DB_NAME = "megaqc.db"
-    DB_PATH = os.path.join(tempfile.mkdtemp(), DB_NAME)
-    DEBUG_TB_ENABLED = False  # Disable Debug toolbar
-    LOG_LEVEL = logging.DEBUG
-    WTF_CSRF_ENABLED = False
+    DEBUG: bool = True
+    TESTING: bool = True
+    ENV: str = "test"
+    DB_DBMS: str = "sqlite"
+    DB_PATH: str = os.path.join(tempfile.mkdtemp(), "megaqc_test.db")
+    LOG_LEVEL: int = logging.DEBUG
 
-    def __init__(self):
-        super(TestConfig, self).__init__()
-        self.update_db_uri()
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         # Log to the terminal
         print(" * Environment: test", file=sys.stderr)
-        print(" * Database type: {}".format(self.SQLALCHEMY_DBMS), file=sys.stderr)
-        print(
-            " * Database path: {}".format(self.SQLALCHEMY_DATABASE_URI_SAN),
-            file=sys.stderr,
-        )
+        print(f" * Database type: {self.DB_DBMS}", file=sys.stderr)
+        print(f" * Database path: {self.DATABASE_URL_SANITIZED}", file=sys.stderr)
+
+
+def get_settings() -> Settings:
+    """
+    Get settings based on environment variables.
+    """
+    env = os.environ.get("MEGAQC_ENV", "dev").lower()
+    if env == "prod" or os.environ.get("MEGAQC_PRODUCTION", "").lower() in ("true", "1"):
+        return ProdSettings()
+    elif env == "test" or os.environ.get("MEGAQC_TESTING", "").lower() in ("true", "1"):
+        return TestSettings()
+    else:
+        return DevSettings()
+
+
+# Backwards compatibility aliases
+Config = Settings
+ProdConfig = ProdSettings
+DevConfig = DevSettings
+TestConfig = TestSettings

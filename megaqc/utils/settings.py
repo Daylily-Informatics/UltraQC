@@ -12,7 +12,6 @@ import logging
 import os
 import subprocess
 
-import pkg_resources
 import yaml
 from environs import Env
 
@@ -22,8 +21,13 @@ logger = logging.getLogger(__name__)
 env = Env()
 
 # Get the MegaQC version
-version = pkg_resources.get_distribution("megaqc").version
-short_version = pkg_resources.get_distribution("megaqc").version
+try:
+    from importlib.metadata import version as get_version
+    version = get_version("megaqc")
+    short_version = version
+except Exception:
+    version = "0.0.0"
+    short_version = version
 script_path = os.path.dirname(os.path.realpath(__file__))
 git_hash = None
 git_hash_short = None

@@ -1,47 +1,38 @@
 # -*- coding: utf-8 -*-
 """
-Public forms.
+Public forms using Pydantic for validation.
 """
-from flask_wtf import Form
-from wtforms import PasswordField, StringField
-from wtforms.validators import DataRequired
+from typing import Optional
 
-from megaqc.user.models import User
+from pydantic import BaseModel, field_validator
 
 
-class LoginForm(Form):
+class LoginForm(BaseModel):
     """
-    Login form.
+    Login form schema.
     """
 
-    username = StringField("Username", validators=[DataRequired()])
-    password = PasswordField("Password", validators=[DataRequired()])
+    username: str
+    password: str
 
-    def __init__(self, *args, **kwargs):
-        """
-        Create instance.
-        """
-        super(LoginForm, self).__init__(*args, **kwargs)
-        self.user = None
+    @field_validator("username")
+    @classmethod
+    def username_not_empty(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Username is required")
+        return v.strip()
 
-    def validate(self):
-        """
-        Validate the form.
-        """
-        initial_validation = super(LoginForm, self).validate()
-        if not initial_validation:
-            return False
+    @field_validator("password")
+    @classmethod
+    def password_not_empty(cls, v: str) -> str:
+        if not v:
+            raise ValueError("Password is required")
+        return v
 
-        self.user = User.query.filter_by(username=self.username.data).first()
-        if not self.user:
-            self.username.errors.append("Unknown username")
-            return False
 
-        if not self.user.check_password(self.password.data):
-            self.password.errors.append("Invalid password")
-            return False
+class LoginResponse(BaseModel):
+    """Response model for login."""
 
-        if not self.user.active:
-            self.username.errors.append("User not activated")
-            return False
-        return True
+    success: bool
+    message: str
+    redirect_url: Optional[str] = None

@@ -1,53 +1,54 @@
+"""
+Test utilities for API tests.
+
+NOTE: This module is being migrated from Flask to FastAPI.
+Some utilities may need to be updated for async patterns.
+"""
 import pytest
-from flask import url_for
-from marshmallow import EXCLUDE
 from sqlalchemy import inspect
 from sqlalchemy.orm import RelationshipProperty
 
 from tests import factories
 
+# REST API endpoint paths (FastAPI routes)
 single_resource_endpoints = [
-    "rest_api.upload",
-    "rest_api.sampledata",
-    "rest_api.report",
-    "rest_api.sample",
-    "rest_api.datatype",
-    "rest_api.user",
-    "rest_api.filter",
-    "rest_api.favouriteplot",
-    "rest_api.dashboard",
+    "/rest_api/v1/uploads/{id}",
+    "/rest_api/v1/sample_data/{id}",
+    "/rest_api/v1/reports/{id}",
+    "/rest_api/v1/samples/{id}",
+    "/rest_api/v1/data_types/{id}",
+    "/rest_api/v1/users/{id}",
+    "/rest_api/v1/filters/{id}",
+    "/rest_api/v1/favourite_plots/{id}",
+    "/rest_api/v1/dashboards/{id}",
 ]
 
 list_resource_endpoints = [
-    "rest_api.uploadlist",
-    "rest_api.sampledatalist",
-    "rest_api.reportlist",
-    "rest_api.reportmetalist",
-    "rest_api.samplelist",
-    "rest_api.metatypelist",
-    "rest_api.datatypelist",
-    "rest_api.userlist",
-    "rest_api.filterlist",
-    "rest_api.filtergrouplist",
-    "rest_api.favouriteplotlist",
-    "rest_api.dashboardlist",
+    "/rest_api/v1/uploads",
+    "/rest_api/v1/sample_data",
+    "/rest_api/v1/reports",
+    "/rest_api/v1/report_meta",
+    "/rest_api/v1/samples",
+    "/rest_api/v1/meta_types",
+    "/rest_api/v1/data_types",
+    "/rest_api/v1/users",
+    "/rest_api/v1/filters",
+    "/rest_api/v1/filter_groups",
+    "/rest_api/v1/favourite_plots",
+    "/rest_api/v1/dashboards",
 ]
 
 
-def unset_dump_only(schema):
+def url_for(endpoint: str, **kwargs) -> str:
     """
-    Unset the "dump_only" property for every field in this schema.
-    """
-    for field in schema.declared_fields.values():
-        field.dump_only = False
-    schema._init_fields()
+    Generate URL from endpoint path with parameters.
 
-
-def dump_only_fields(schema):
+    This is a simplified version for FastAPI that replaces Flask's url_for.
     """
-    Returns a list of field names for the dump_only fields.
-    """
-    return [key for key, field in schema._declared_fields.items() if field.dump_only]
+    url = endpoint
+    for key, value in kwargs.items():
+        url = url.replace(f"{{{key}}}", str(value))
+    return url
 
 
 def object_as_dict(obj, relationships=False):

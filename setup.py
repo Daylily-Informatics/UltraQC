@@ -72,63 +72,66 @@ setup(
         ],
     },
     install_requires=[
-        "argon2-cffi~=20.1",
-        "click~=7.0",
-        "Flask-APScheduler~=1.11",
-        "Flask-Caching~=1.9",
-        "Flask-DebugToolbar~=0.11",
-        "Flask-Login~=0.5",
-        "Flask-SQLAlchemy~=2.4",
-        "Flask-WTF~=0.14",
-        "Flask~=1.1",
-        "future~=0.18",
-        "itsdangerous~=1.1",
-        "Jinja2~=2.11",
-        "markdown~=3.3",
-        "multiqc~=1.9",
-        "numpy~=1.14",
-        "passlib~=1.7",
-        "plotly>=2,<5",
-        "pyyaml~=5.1",
-        "SQLAlchemy~=1.1",
-        "Werkzeug>=0.14,<2.0",
-        "WTForms[email]~=2.1",
-        "flask_restful~=0.3",
-        "flask-marshmallow~=0.10",
-        "marshmallow~=3.0",
-        "marshmallow-sqlalchemy>=0.17,<0.26",
-        "flask-uploads~=0.2",
-        "marshmallow-jsonapi~=0.23",
-        "outlier-utils~=0.0.3",
-        "webargs~=5.5",  # do not upgrade, since it breaks parsing
-        "querystring-parser~=1.2",
-        "scipy~=1.5",
-        "flatten_json~=0.1",
-        "flapison~=0.30",
-        "Flask-Migrate~=2.5",
-        "environs~=9.2.0",
-        "MarkupSafe<2.1.0",
+        # Core FastAPI dependencies
+        "fastapi>=0.100.0",
+        "uvicorn[standard]>=0.22.0",
+        "starlette>=0.27.0",
+        # Database
+        "sqlalchemy[asyncio]>=2.0.0",
+        "alembic>=1.11.0",
+        "aiosqlite>=0.19.0",  # For async SQLite support
+        "asyncpg>=0.28.0",  # For async PostgreSQL support
+        # Authentication
+        "argon2-cffi>=21.0.0",
+        "passlib>=1.7.4",
+        "python-jose[cryptography]>=3.3.0",
+        "python-multipart>=0.0.6",
+        # Serialization
+        "pydantic>=2.0.0",
+        "pydantic-settings>=2.0.0",
+        "marshmallow>=3.19.0",
+        # Templates and rendering
+        "jinja2>=3.1.0",
+        "markupsafe>=2.1.0",
+        "markdown>=3.4.0",
+        # CLI
+        "click>=8.0.0",
+        "typer>=0.9.0",
+        # Scheduling
+        "apscheduler>=3.10.0",
+        # Data processing
+        "numpy>=1.24.0",
+        "scipy>=1.10.0",
+        "plotly>=5.0.0",
+        "flatten_json>=0.1.13",
+        "outlier-utils>=0.0.3",
+        # Utilities
+        "pyyaml>=6.0",
+        "environs>=9.5.0",
+        "httpx>=0.24.0",  # For async HTTP client
+        "aiofiles>=23.0.0",  # For async file operations
+        # MultiQC integration
+        "multiqc>=1.14",
     ],
     extras_require={
         "dev": [
             # Testing
-            "pytest~=7.2",
-            "WebTest~=2.0",
-            "factory-boy>=2.12,<4.0",
-            "livereload~=2.5",
+            "pytest>=7.3.0",
+            "pytest-asyncio>=0.21.0",
+            "httpx>=0.24.0",
+            "factory-boy>=3.2.0",
+            "asgi-lifespan>=2.1.0",
             # Lint and code style
-            "flake8~=3.7",
-            "flake8-blind-except~=0.1",
-            "flake8-debugger>=3.1,<5.0",
-            "flake8-docstrings~=1.3",
-            "isort[pyproject]>=4.3,<6.0",
-            "pep8-naming~=0.8",
-            "pre-commit",
+            "ruff>=0.0.270",
+            "black>=23.0.0",
+            "isort>=5.12.0",
+            "pre-commit>=3.3.0",
+            "mypy>=1.3.0",
         ],
-        "deploy": ["wheel~=0.30"],
+        "deploy": ["wheel>=0.40.0"],
         "prod": [
-            "psycopg2~=2.6",
-            "gunicorn>=19.7,<21.0",
+            "asyncpg>=0.28.0",  # PostgreSQL async driver
+            "gunicorn>=21.0.0",
         ],
     },
     classifiers=[

@@ -1,27 +1,29 @@
-import pytest
-from flask import Flask
-from marshmallow import EXCLUDE
+"""
+Tests for API permissions.
 
-from megaqc.rest_api.schemas import UserSchema
+NOTE: These tests are being migrated from Flask to FastAPI.
+"""
+import pytest
+from httpx import Response
+
 from megaqc.user.models import User
 from tests.factories import UserFactory
 
 from .utils import (
-    dump_only_fields,
     find_factory,
     instance_pk,
     list_resource_endpoints,
-    resource_from_endpoint,
     single_resource_endpoints,
     url_for,
 )
 
 
-def raise_response(resp: Flask.response_class):
+def raise_response(resp: Response):
+    """Raise an exception if the response indicates an error."""
     if not str(resp.status_code).startswith("2"):
         raise Exception(
             "Request failed with status {} and body {}".format(
-                resp.status_code, resp.data
+                resp.status_code, resp.text
             )
         )
 

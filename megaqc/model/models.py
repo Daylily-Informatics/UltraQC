@@ -1,35 +1,38 @@
 # -*- coding: utf-8 -*-
+"""
+Database models for MegaQC.
+"""
 import datetime as dt
 import json
 from enum import Enum
 
-from sqlalchemy import Boolean, Column, DateTime
-from sqlalchemy import Enum as SqlEnum
-from sqlalchemy import ForeignKey, Integer, UnicodeText, func
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, Table, UnicodeText, func
 from sqlalchemy.ext.hybrid import hybrid_method, hybrid_property
 from sqlalchemy.orm import relationship
 
-from megaqc.database import CRUDMixin
-from megaqc.extensions import db
+from megaqc.database import Base
 
-user_plotconfig_map = db.Table(
+# Association tables
+user_plotconfig_map = Table(
     "user_plotconfig_map",
-    db.Column("user_id", Integer, db.ForeignKey("users.user_id")),
-    db.Column("plot_config_id", Integer, db.ForeignKey("plot_config.config_id")),
+    Base.metadata,
+    Column("user_id", Integer, ForeignKey("users.user_id")),
+    Column("plot_config_id", Integer, ForeignKey("plot_config.config_id")),
 )
 
-user_sampletype_map = db.Table(
+user_sampletype_map = Table(
     "user_sampletype_map",
-    db.Column("user_id", Integer, db.ForeignKey("users.user_id")),
-    db.Column(
+    Base.metadata,
+    Column("user_id", Integer, ForeignKey("users.user_id")),
+    Column(
         "sample_data_type_id",
         Integer,
-        db.ForeignKey("sample_data_type.sample_data_type_id"),
+        ForeignKey("sample_data_type.sample_data_type_id"),
     ),
 )
 
 
-class Report(db.Model, CRUDMixin):
+class Report(Base):
     """
     A MultiQC report.
     """
@@ -52,7 +55,7 @@ class Report(db.Model, CRUDMixin):
     )
 
 
-class ReportMeta(db.Model, CRUDMixin):
+class ReportMeta(Base):
     __tablename__ = "report_meta"
     report_meta_id = Column(Integer, primary_key=True)
     report_meta_key = Column(UnicodeText, nullable=False)
@@ -74,15 +77,8 @@ class ReportMeta(db.Model, CRUDMixin):
         """
         return session.query(ReportMeta.report_meta_key).distinct()
 
-    @classmethod
-    def get_keys(cls, session):
-        """
-        Returns all unique metadata keys.
-        """
-        return session.query(ReportMeta.report_meta_key).distinct()
 
-
-class PlotConfig(db.Model, CRUDMixin):
+class PlotConfig(Base):
     __tablename__ = "plot_config"
     config_id = Column(Integer, primary_key=True)
     config_type = Column(UnicodeText, nullable=False)
@@ -90,12 +86,12 @@ class PlotConfig(db.Model, CRUDMixin):
     config_dataset = Column(UnicodeText, nullable=True)
     data = Column(UnicodeText, nullable=False)
 
-    fav_users = db.relationship(
+    fav_users = relationship(
         "User", secondary=user_plotconfig_map, backref="favourite_plotconfigs"
     )
 
 
-class PlotData(db.Model, CRUDMixin):
+class PlotData(Base):
     __tablename__ = "plot_data"
     plot_data_id = Column(Integer, primary_key=True)
     report_id = Column(Integer, ForeignKey("report.report_id"), index=True)
@@ -105,7 +101,7 @@ class PlotData(db.Model, CRUDMixin):
     data = Column(UnicodeText, nullable=False)
 
 
-class PlotCategory(db.Model, CRUDMixin):
+class PlotCategory(Base):
     __tablename__ = "plot_category"
     plot_category_id = Column(Integer, primary_key=True)
     report_id = Column(Integer, ForeignKey("report.report_id"))
@@ -114,7 +110,7 @@ class PlotCategory(db.Model, CRUDMixin):
     data = Column(UnicodeText, nullable=False)
 
 
-class PlotFavourite(db.Model, CRUDMixin):
+class PlotFavourite(Base):
     __tablename__ = "plot_favourite"
     plot_favourite_id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.user_id"), index=True)
@@ -127,7 +123,7 @@ class PlotFavourite(db.Model, CRUDMixin):
     user = relationship("User", back_populates="favourite_plots")
 
 
-class Dashboard(db.Model, CRUDMixin):
+class Dashboard(Base):
     __tablename__ = "dashboard"
     dashboard_id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.user_id"), index=True)
@@ -140,7 +136,7 @@ class Dashboard(db.Model, CRUDMixin):
     user = relationship("User", back_populates="dashboards")
 
 
-class SampleDataType(db.Model, CRUDMixin):
+class SampleDataType(Base):
     __tablename__ = "sample_data_type"
     sample_data_type_id = Column(Integer, primary_key=True)
     data_id = Column(UnicodeText)
@@ -156,7 +152,9 @@ class SampleDataType(db.Model, CRUDMixin):
         """
         Gets the schema as JSON.
         """
-        return json.loads(self.schema)
+        if self.schema:
+            return json.loads(self.schema)
+        return {}
 
     @property
     def type(self):
@@ -179,17 +177,10 @@ class SampleDataType(db.Model, CRUDMixin):
         # https://en.wikibooks.org/wiki/SQL_Dialects_Reference/Functions_and_expressions/String_functions
         return func.replace(func.replace(cls.data_key, "__", ": "), "_", " ")
 
-    @classmethod
-    def get_keys(cls, session):
-        """
-        Returns all unique metadata keys.
-        """
-        return session.query(SampleDataType.report_meta_key).distinct()
-
     sample_data = relationship("SampleData", back_populates="data_type")
 
 
-class SampleData(db.Model, CRUDMixin):
+class SampleData(Base):
     __tablename__ = "sample_data"
     sample_data_id = Column(Integer, primary_key=True)
     report_id = Column(Integer, ForeignKey("report.report_id"), index=True)
@@ -210,7 +201,7 @@ class SampleData(db.Model, CRUDMixin):
     data_type = relationship("SampleDataType", back_populates="sample_data")
 
 
-class Sample(db.Model, CRUDMixin):
+class Sample(Base):
     __tablename__ = "sample"
     sample_id = Column(Integer, primary_key=True)
     sample_name = Column(UnicodeText)
@@ -225,7 +216,7 @@ class Sample(db.Model, CRUDMixin):
     data = relationship("SampleData", back_populates="sample", passive_deletes="all")
 
 
-class SampleFilter(db.Model, CRUDMixin):
+class SampleFilter(Base):
     __tablename__ = "sample_filter"
     sample_filter_id = Column(Integer, primary_key=True)
     sample_filter_name = Column(UnicodeText)
@@ -241,7 +232,7 @@ class SampleFilter(db.Model, CRUDMixin):
         return json.loads(self.sample_filter_data)
 
 
-class Upload(db.Model, CRUDMixin):
+class Upload(Base):
     __tablename__ = "uploads"
     upload_id = Column(Integer, primary_key=True)
     status = Column(UnicodeText, index=True)

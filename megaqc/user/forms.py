@@ -1,120 +1,106 @@
 # -*- coding: utf-8 -*-
 """
-User forms.
+User forms using Pydantic for validation.
 """
-import sqlalchemy as sa
-from flask_wtf import Form
-from wtforms import BooleanField, HiddenField, PasswordField, StringField
-from wtforms.validators import DataRequired, Email, EqualTo, Length
+from typing import Optional
 
-from .models import User
+from pydantic import BaseModel, EmailStr, field_validator, model_validator
 
 
-class AdminForm(Form):
-    user_id = HiddenField("id")
-    username = StringField(
-        "Username", validators=[DataRequired(), Length(min=3, max=25)]
-    )
-    first_name = StringField("First Name", validators=[Length(min=1, max=80)])
-    last_name = StringField("Last Name", validators=[Length(min=1, max=80)])
-    email = StringField(
-        "Email", validators=[DataRequired(), Email(), Length(min=6, max=80)]
-    )
-    active = BooleanField("Active")
-    is_admin = BooleanField("Admin")
+class AdminForm(BaseModel):
+    """Admin user edit form schema."""
 
-    def validate(self):
-        """
-        Validate the form.
-        """
-        initial_validation = super(AdminForm, self).validate()
-        if not initial_validation:
-            return False
-        user = User.query.filter_by(username=self.username.data).first()
-        if user and user.user_id != self.user_id.data:
-            self.username.errors.append("Username already registered")
-            return False
-        user = User.query.filter_by(email=self.email.data).first()
-        if user and user.user_id != self.user_id.data:
-            self.email.errors.append("Email already registered")
-            return False
-        return True
+    user_id: Optional[int] = None
+    username: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: EmailStr
+    active: bool = False
+    is_admin: bool = False
 
-    def __init__(self, *args, **kwargs):
-        """
-        Create instance.
-        """
-        super(AdminForm, self).__init__(*args, **kwargs)
-        self.user = None
+    @field_validator("username")
+    @classmethod
+    def validate_username(cls, v: str) -> str:
+        if not v or len(v) < 3 or len(v) > 25:
+            raise ValueError("Username must be between 3 and 25 characters")
+        return v.strip()
+
+    @field_validator("first_name", "last_name")
+    @classmethod
+    def validate_name(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and len(v) > 80:
+            raise ValueError("Name must be at most 80 characters")
+        return v.strip() if v else v
 
 
-class PasswordChangeForm(Form):
-    password = PasswordField(
-        "Password", validators=[DataRequired(), Length(min=6, max=40)]
-    )
-    confirm = PasswordField(
-        "Verify password",
-        [DataRequired(), EqualTo("password", message="Passwords must match")],
-    )
+class PasswordChangeForm(BaseModel):
+    """Password change form schema."""
 
-    def __init__(self, *args, **kwargs):
-        """
-        Create instance.
-        """
-        super(PasswordChangeForm, self).__init__(*args, **kwargs)
-        self.user = None
+    password: str
+    confirm: str
 
-    def validate(self):
-        """
-        Validate the form.
-        """
-        return super(PasswordChangeForm, self).validate()
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        if not v or len(v) < 6 or len(v) > 40:
+            raise ValueError("Password must be between 6 and 40 characters")
+        return v
+
+    @model_validator(mode="after")
+    def passwords_match(self) -> "PasswordChangeForm":
+        if self.password != self.confirm:
+            raise ValueError("Passwords must match")
+        return self
 
 
-class RegisterForm(Form):
-    """
-    Register form.
-    """
+class RegisterForm(BaseModel):
+    """User registration form schema."""
 
-    class Meta:
-        csrf = False  # disable csrf protection on registration
+    username: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: EmailStr
+    password: str
+    confirm: str
 
-    username = StringField(
-        "Username", validators=[DataRequired(), Length(min=3, max=25)]
-    )
-    first_name = StringField("First Name", validators=[Length(min=1, max=80)])
-    last_name = StringField("Last Name", validators=[Length(min=1, max=80)])
-    email = StringField(
-        "Email", validators=[DataRequired(), Email(), Length(min=6, max=40)]
-    )
-    password = PasswordField(
-        "Password", validators=[DataRequired(), Length(min=6, max=40)]
-    )
-    confirm = PasswordField(
-        "Verify password",
-        [DataRequired(), EqualTo("password", message="Passwords must match")],
-    )
+    @field_validator("username")
+    @classmethod
+    def validate_username(cls, v: str) -> str:
+        if not v or len(v) < 3 or len(v) > 25:
+            raise ValueError("Username must be between 3 and 25 characters")
+        return v.strip()
 
-    def __init__(self, *args, **kwargs):
-        """
-        Create instance.
-        """
-        super(RegisterForm, self).__init__(*args, **kwargs)
-        self.user = None
+    @field_validator("first_name", "last_name")
+    @classmethod
+    def validate_name(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and len(v) > 80:
+            raise ValueError("Name must be at most 80 characters")
+        return v.strip() if v else v
 
-    def validate(self):
-        """
-        Validate the form.
-        """
-        initial_validation = super(RegisterForm, self).validate()
-        if not initial_validation:
-            return False
-        user = User.query.filter_by(username=self.username.data).first()
-        if user:
-            self.username.errors.append("Username already registered")
-            return False
-        user = User.query.filter_by(email=self.email.data).first()
-        if user:
-            self.email.errors.append("Email already registered")
-            return False
-        return True
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        if not v or len(v) < 6 or len(v) > 40:
+            raise ValueError("Password must be between 6 and 40 characters")
+        return v
+
+    @model_validator(mode="after")
+    def passwords_match(self) -> "RegisterForm":
+        if self.password != self.confirm:
+            raise ValueError("Passwords must match")
+        return self
+
+
+class UserResponse(BaseModel):
+    """Response model for user data."""
+
+    user_id: int
+    username: str
+    email: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    active: bool
+    is_admin: bool
+
+    class Config:
+        from_attributes = True

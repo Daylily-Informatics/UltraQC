@@ -1,28 +1,26 @@
 import pytest
-from flask import request
-from flask.testing import FlaskClient
+import pytest_asyncio
 
 from tests import factories
 
 
-@pytest.fixture(scope="function")
-def client(app):
-    with app.test_client() as c:
-        c: FlaskClient
-        yield c
-
-
-@pytest.fixture(scope="function")
-def token(db: str):
-    user = factories.UserFactory(is_admin=False)
-    db.session.add(user)
-    db.session.commit()
+@pytest_asyncio.fixture(scope="function")
+async def token(db_session) -> str:
+    """Create a regular user and return their API token."""
+    user = factories.UserFactory.build(is_admin=False)
+    user.set_password("password")
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
     return user.api_token
 
 
-@pytest.fixture(scope="function")
-def admin_token(db) -> str:
-    user = factories.UserFactory(is_admin=True)
-    db.session.add(user)
-    db.session.commit()
+@pytest_asyncio.fixture(scope="function")
+async def admin_token(db_session) -> str:
+    """Create an admin user and return their API token."""
+    user = factories.UserFactory.build(is_admin=True)
+    user.set_password("password")
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
     return user.api_token

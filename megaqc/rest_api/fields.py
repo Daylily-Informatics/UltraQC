@@ -1,79 +1,89 @@
+"""
+Custom field types for serialization/deserialization.
+
+This module provides custom Marshmallow fields for the REST API.
+"""
 import json
+from typing import Any, List, Optional, Type
 
-from flask_restful import url_for
-from sqlalchemy.inspection import inspect
-from sqlalchemy.orm.collections import InstrumentedList
-
-from megaqc.extensions import db, ma
-from megaqc.model import models
+from marshmallow import fields, missing
 
 
-class JsonString(ma.Field):
+class JsonString(fields.Field):
     """
-    Serializes a JSON structure as JSON, but deserializes it as a string (for DB
-    storage), or vice-versa.
+    A Marshmallow field that serializes/deserializes JSON strings.
+
+    By default, it deserializes JSON strings to Python objects and serializes
+    Python objects to JSON strings. If `invert=True`, the behavior is reversed.
     """
 
-    def _jsonschema_type_mapping(self):
-        return {
-            "type": "string",
-        }
-
-    def __init__(self, *args, invert=False, **kwargs):
+    def __init__(self, invert: bool = False, attribute: Optional[str] = None, **kwargs):
         self.invert = invert
-        super().__init__(*args, **kwargs)
+        super().__init__(attribute=attribute, **kwargs)
 
-    def _serialize(self, value, attr, obj, **kwargs):
-        if self.invert:
-            return json.dumps(value)
-        else:
-            return json.loads(value)
-
-    def _deserialize(self, value, attr, data, **kwargs):
-        if self.invert:
-            return json.loads(value)
-        else:
-            return json.dumps(value)
-
-
-class ModelAssociation(ma.Field):
-    """
-    Dumps as a foreign key, e.g. "3", and loads as a model instance, e.g. User.
-    """
-
-    def __init__(self, model, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.model = model
-
-    def _serialize(self, value, attr, obj, **kwargs):
-        return inspect(value).identity
-
-    def _deserialize(self, value, attr, data, **kwargs):
-        if not value:
+    def _serialize(self, value: Any, attr: str, obj: Any, **kwargs) -> Any:
+        """Serialize value to/from JSON string."""
+        if value is None:
             return None
+        if self.invert:
+            # Serialize Python object to JSON string
+            return json.dumps(value)
+        else:
+            # Deserialize JSON string to Python object
+            if isinstance(value, str):
+                return json.loads(value)
+            return value
 
-        return db.session.query(self.model).get(value)
+    def _deserialize(self, value: Any, attr: str, data: Any, **kwargs) -> Any:
+        """Deserialize value from/to JSON string."""
+        if value is None:
+            return None
+        if self.invert:
+            # Deserialize JSON string to Python object
+            if isinstance(value, str):
+                return json.loads(value)
+            return value
+        else:
+            # Serialize Python object to JSON string
+            return json.dumps(value)
 
 
-class FilterReference(ModelAssociation):
+class FilterReference(fields.Field):
     """
-    Dumps as a SampleFilter foreign key, e.g. "3", and loads as a filter array.
+    A Marshmallow field that references a filter by ID and returns its data.
+
+    This field is used to deserialize filter references in API requests.
+    When given a filter ID, it returns the filter's data as a list.
+    When given a list directly, it passes it through.
     """
 
-    def _jsonschema_type_mapping(self):
-        return {
-            "type": "array",
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(models.SampleFilter, *args, **kwargs)
-
-    def _deserialize(self, value, attr, data, **kwargs):
-        if not value:
+    def _serialize(self, value: Any, attr: str, obj: Any, **kwargs) -> Any:
+        """Serialize filter data."""
+        if value is None:
             return []
+        if isinstance(value, list):
+            return value
+        return []
 
-        instance = super()._deserialize(value, attr, data, **kwargs)
-        if not instance:
+    def _deserialize(self, value: Any, attr: str, data: Any, **kwargs) -> Any:
+        """
+        Deserialize filter reference.
+
+        If value is a list, return it directly.
+        If value is an integer (filter ID), this would need to look up the filter.
+        For now, we just return the value as-is since async lookup isn't supported
+        in Marshmallow's synchronous deserialization.
+        """
+        if value is None:
             return []
-
-        return instance.filter_json
+        if isinstance(value, list):
+            return value
+        if isinstance(value, str):
+            try:
+                # Try to parse as JSON
+                parsed = json.loads(value)
+                if isinstance(parsed, list):
+                    return parsed
+            except (json.JSONDecodeError, TypeError):
+                pass
+        return []

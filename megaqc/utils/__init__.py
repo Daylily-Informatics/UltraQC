@@ -2,13 +2,29 @@
 """
 Helper utilities and decorators.
 """
-from flask import flash
+from typing import List, Tuple
 
 
-def flash_errors(form, category="warning"):
+def get_form_errors(form) -> List[Tuple[str, str]]:
     """
-    Flash all errors for a form.
+    Get all errors from a Pydantic model or form.
+
+    Returns a list of (field_name, error_message) tuples.
     """
-    for field, errors in list(form.errors.items()):
-        for error in errors:
-            flash("{0} - {1}".format(getattr(form, field).label.text, error), category)
+    errors = []
+    if hasattr(form, "errors"):
+        # Pydantic ValidationError
+        for error in form.errors():
+            field = error.get("loc", ["unknown"])[-1]
+            msg = error.get("msg", "Invalid value")
+            errors.append((str(field), msg))
+    return errors
+
+
+def format_flash_errors(errors: List[Tuple[str, str]], category: str = "warning") -> List[Tuple[str, str]]:
+    """
+    Format errors for flash messages.
+
+    Returns a list of (category, message) tuples.
+    """
+    return [(category, f"{field} - {error}") for field, error in errors]

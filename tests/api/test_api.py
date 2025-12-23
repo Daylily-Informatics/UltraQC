@@ -1,21 +1,18 @@
 """
 Generic tests for normal resources that follow a schema for GET, POST, DELETE etc.
+
+NOTE: These tests are being migrated from Flask to FastAPI.
+Many tests may need to be updated for async patterns and new endpoint structure.
 """
 import pytest
-from flask import url_for
-from marshmallow import EXCLUDE
 
 from .utils import (
-    dump_only_fields,
-    factory_clone,
     find_factory,
     find_matching_resource,
     instance_pk,
     is_matching_resource,
     list_resource_endpoints,
-    resource_from_endpoint,
     single_resource_endpoints,
-    unset_dump_only,
     url_for,
 )
 

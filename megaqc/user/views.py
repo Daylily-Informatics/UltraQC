@@ -1,53 +1,81 @@
 # -*- coding: utf-8 -*-
 """
-User views.
+User views for FastAPI.
 """
-from flask import Blueprint, abort, render_template
-from flask_login import current_user, login_required
+from typing import List
 
-from megaqc.extensions import db
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import HTMLResponse
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from megaqc.app import get_templates
+from megaqc.auth import get_current_active_user, get_current_admin_user
+from megaqc.database import get_async_session
 from megaqc.user.forms import AdminForm, PasswordChangeForm
 from megaqc.user.models import User
 
-blueprint = Blueprint("user", __name__, url_prefix="/users", static_folder="../static")
+user_router = APIRouter(tags=["users"])
 
 
-@blueprint.route("/")
-@login_required
-def profile():
+@user_router.get("/", response_class=HTMLResponse)
+async def profile(
+    request: Request,
+    current_user: User = Depends(get_current_active_user),
+):
     """
     Show user profile.
     """
-    return render_template("users/profile.html")
+    templates = get_templates()
+    return templates.TemplateResponse(
+        "users/profile.html",
+        {"request": request, "current_user": current_user},
+    )
 
 
-@blueprint.route("/multiqc_config")
-@login_required
-def multiqc_config():
+@user_router.get("/multiqc_config", response_class=HTMLResponse)
+async def multiqc_config(
+    request: Request,
+    current_user: User = Depends(get_current_active_user),
+):
     """
     Instructions for MultiQC configuration.
     """
-    return render_template("users/multiqc_config.html")
+    templates = get_templates()
+    return templates.TemplateResponse(
+        "users/multiqc_config.html",
+        {"request": request, "current_user": current_user},
+    )
 
 
-@blueprint.route("/password")
-@login_required
-def change_password():
+@user_router.get("/password", response_class=HTMLResponse)
+async def change_password(
+    request: Request,
+    current_user: User = Depends(get_current_active_user),
+):
     """
     Change user password.
     """
-    form = PasswordChangeForm()
-    return render_template("users/change_password.html", form=form)
+    templates = get_templates()
+    return templates.TemplateResponse(
+        "users/change_password.html",
+        {"request": request, "current_user": current_user, "form": {}},
+    )
 
 
-@blueprint.route("/admin/users")
-@login_required
-def manage_users():
-    if not current_user.is_admin:
-        abort(403)
-    else:
-        users_data = db.session.query(User).all()
-        form = AdminForm()
-        return render_template(
-            "users/manage_users.html", users_data=users_data, form=form
-        )
+@user_router.get("/admin/users", response_class=HTMLResponse)
+async def manage_users(
+    request: Request,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_admin_user),
+):
+    """
+    Manage users (admin only).
+    """
+    templates = get_templates()
+    result = await session.execute(select(User))
+    users_data = result.scalars().all()
+    return templates.TemplateResponse(
+        "users/manage_users.html",
+        {"request": request, "current_user": current_user, "users_data": users_data, "form": {}},
+    )

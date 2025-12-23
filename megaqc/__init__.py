@@ -2,6 +2,8 @@
 """
 Main application package.
 """
-import pkg_resources
-
-version = pkg_resources.get_distribution("megaqc").version
+try:
+    from importlib.metadata import version as get_version
+    version = get_version("megaqc")
+except Exception:
+    version = "0.0.0"

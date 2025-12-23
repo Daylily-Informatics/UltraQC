@@ -1,83 +1,84 @@
 import os
 from enum import IntEnum, auto
 from functools import wraps
+from typing import Optional
 from uuid import uuid4
 
-from flapison.exceptions import JsonApiException
-from flask import abort, request
-from flask.globals import current_app
+from fastapi import HTTPException, Request
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from megaqc.settings import get_settings
 from megaqc.user.models import User
 
 
-def get_upload_dir():
-    upload_dir = current_app.config["UPLOAD_FOLDER"]
+def get_upload_dir() -> str:
+    """Get the upload directory, creating it if necessary."""
+    settings = get_settings()
+    upload_dir = settings.UPLOAD_FOLDER
     if not os.path.isdir(upload_dir):
-        os.mkdir(upload_dir)
-
+        os.makedirs(upload_dir, exist_ok=True)
     return upload_dir
 
 
-def get_unique_filename():
-    dir = get_upload_dir()
+def get_unique_filename() -> str:
+    """Generate a unique filename in the upload directory."""
+    upload_dir = get_upload_dir()
     while True:
-        proposed = os.path.join(dir, str(uuid4()))
+        proposed = os.path.join(upload_dir, str(uuid4()))
         if not os.path.exists(proposed):
             return proposed
 
 
 class Permission(IntEnum):
+    """Permission levels for API access."""
     NONUSER = auto()
     USER = auto()
     ADMIN = auto()
 
 
-def api_perms(min_level: Permission = Permission.NONUSER):
+async def get_user_from_token(
+    session: AsyncSession, access_token: Optional[str]
+) -> tuple[Optional[User], Permission, Optional[str]]:
     """
-    Adds a "user" and "permission" kwarg to the view function. Also verifies a minimum
-    permissions level.
+    Get user and permission level from access token.
 
-    :param min_level: If provided, this is the minimum permission level
-        required by this endpoint
+    Returns:
+        Tuple of (user, permission_level, error_message)
     """
+    if not access_token:
+        return None, Permission.NONUSER, "No access token provided. Please add a header with the name 'access_token'."
 
-    def wrapper(function):
-        @wraps(function)
-        def user_wrap_function(*args, **kwargs):
-            extra = None
-            if not request.headers.has_key("access_token"):
-                perms = Permission.NONUSER
-                user = None
-                extra = "No access token provided. Please add a header with the name 'access_token'."
-            else:
-                user = User.query.filter_by(
-                    api_token=request.headers.get("access_token")
-                ).first()
-                if not user:
-                    perms = Permission.NONUSER
-                    extra = "The provided access token was invalid."
-                elif user.is_anonymous:
-                    perms = Permission.NONUSER
-                elif user.is_admin:
-                    perms = Permission.ADMIN
-                elif not user.is_active():
-                    perms = Permission.NONUSER
-                    extra = "User is not active."
-                else:
-                    perms = Permission.USER
+    result = await session.execute(
+        select(User).where(User.api_token == access_token)
+    )
+    user = result.scalar_one_or_none()
 
-            if perms < min_level:
-                title = "Insufficient permissions to access this resource"
-                raise JsonApiException(
-                    title=title,
-                    detail=extra,
-                    status=403,
-                )
+    if not user:
+        return None, Permission.NONUSER, "The provided access token was invalid."
 
-            kwargs["user"] = user
-            kwargs["permission"] = perms
-            return function(*args, **kwargs)
+    if hasattr(user, "is_anonymous") and user.is_anonymous:
+        return user, Permission.NONUSER, None
 
-        return user_wrap_function
+    if user.is_admin:
+        return user, Permission.ADMIN, None
 
-    return wrapper
+    if not user.active:
+        return user, Permission.NONUSER, "User is not active."
+
+    return user, Permission.USER, None
+
+
+def check_permission(
+    permission: Permission,
+    min_level: Permission,
+    error_detail: Optional[str] = None
+) -> None:
+    """
+    Check if the permission level meets the minimum requirement.
+
+    Raises HTTPException if permission is insufficient.
+    """
+    if permission < min_level:
+        detail = error_detail or "Insufficient permissions to access this resource"
+        raise HTTPException(status_code=403, detail=detail)

@@ -1,439 +1,520 @@
 """
-Location of a rewritten API in a RESTful style, with appropriate resources Following the
-JSON API standard where relevant: https://jsonapi.org/format/
-"""
+REST API for FastAPI.
 
+RESTful API following JSON API patterns where relevant.
+"""
 from hashlib import sha1
 from http import HTTPStatus
+from typing import Any, Dict, List, Optional
 
-from flapison import ResourceDetail, ResourceList, ResourceRelationship
-from flapison.schema import get_nested_fields, get_relationships
-from flask import Blueprint, current_app, jsonify, make_response, request
-from flask_login import current_user, login_required
-from marshmallow.utils import EXCLUDE, INCLUDE
-from marshmallow_jsonapi.exceptions import IncorrectTypeError
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile, status
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+from sqlalchemy import distinct, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 import megaqc.user.models as user_models
-from megaqc.extensions import db, json_api, restful
+from megaqc.auth import get_current_active_user, get_current_admin_user, get_current_user
+from megaqc.database import get_async_session
 from megaqc.model import models
 from megaqc.rest_api import plot, schemas, utils
-from megaqc.rest_api.content import json_to_csv
-from megaqc.rest_api.utils import Permission, api_perms
-from megaqc.rest_api.webarg_parser import use_args, use_kwargs
 
-api_bp = Blueprint("rest_api", __name__, url_prefix="/rest_api/v1")
-json_api.blueprint = api_bp
-
-
-class PermissionsMixin:
-    """
-    Adds shared config to all views.
-
-    Logged-out users shouldn't be able to access the API at all, logged in users should
-    be able to only GET, and only admins should be able to POST, PATCH or DELETE. These
-    decorators can be overriden by child classes, however
-    """
-
-    @api_perms(Permission.USER)
-    def get(self, **kwargs):
-        return super().get(**kwargs)
-
-    @api_perms(Permission.ADMIN)
-    def post(self, **kwargs):
-        return super().post(**kwargs)
-
-    @api_perms(Permission.ADMIN)
-    def patch(self, **kwargs):
-        return super().patch(**kwargs)
-
-    @api_perms(Permission.ADMIN)
-    def delete(self, **kwargs):
-        return super().delete(**kwargs)
-
-
-class Upload(PermissionsMixin, ResourceDetail):
-    schema = schemas.UploadSchema
-    data_layer = dict(session=db.session, model=models.Upload)
-
-
-class UploadList(PermissionsMixin, ResourceList):
-    view_kwargs = True
-    schema = schemas.UploadSchema
-    data_layer = dict(session=db.session, model=models.Upload)
-    request_parsers = {"multipart/form-data": lambda x: x}
-
-    def get_schema_kwargs(self, args, kwargs):
-        # Only show the filepath if they're an admin
-        if "user" in kwargs and kwargs["permission"] <= utils.Permission.ADMIN:
-            return {"exclude": ["path"]}
-
-        return {}
-
-    @api_perms(Permission.USER)
-    def post(self, **kwargs):
-        """
-        Upload a new report.
-
-        This is rare in that average users *can* do this, even though they aren't
-        allowed to edit arbitrary data
-        """
-        # This doesn't exactly follow the JSON API spec, since it doesn't exactly support file uploads:
-        # https://github.com/json-api/json-api/issues/246
-        file_name = utils.get_unique_filename()
-        request.files["report"].save(file_name)
-        upload_row = models.Upload.create(
-            status="NOT TREATED",
-            path=file_name,
-            message="File has been created, loading in MegaQC is queued.",
-            user_id=kwargs["user"].user_id,
-        )
-
-        return schemas.UploadSchema(many=False).dump(upload_row), HTTPStatus.CREATED
-
-
-class UploadRelationship(PermissionsMixin, ResourceRelationship):
-    schema = schemas.UploadSchema
-    data_layer = dict(session=db.session, model=models.Upload)
-
-
-class ReportList(PermissionsMixin, ResourceList):
-    view_kwargs = True
-    schema = schemas.ReportSchema
-    data_layer = dict(session=db.session, model=models.Report)
-
-
-class Report(PermissionsMixin, ResourceDetail):
-    schema = schemas.ReportSchema
-    data_layer = dict(session=db.session, model=models.Report)
-
-
-class ReportRelationship(PermissionsMixin, ResourceRelationship):
-    schema = schemas.ReportSchema
-    data_layer = dict(session=db.session, model=models.Report)
-
-
-class ReportMeta(PermissionsMixin, ResourceDetail):
-    view_kwargs = True
-    schema = schemas.ReportMetaSchema
-    data_layer = dict(session=db.session, model=models.ReportMeta)
-
-
-class ReportMetaList(PermissionsMixin, ResourceList):
-    view_kwargs = True
-    schema = schemas.ReportMetaSchema
-    data_layer = dict(session=db.session, model=models.ReportMeta)
-
-
-class ReportMetaRelationship(PermissionsMixin, ResourceRelationship):
-    schema = schemas.ReportMetaSchema
-    data_layer = dict(session=db.session, model=models.ReportMeta)
-
-
-class Sample(PermissionsMixin, ResourceDetail):
-    schema = schemas.SampleSchema
-    data_layer = dict(session=db.session, model=models.Sample)
-
-
-class SampleList(PermissionsMixin, ResourceList):
-    view_kwargs = True
-    schema = schemas.SampleSchema
-    data_layer = dict(session=db.session, model=models.Sample)
-
-
-class SampleRelationship(PermissionsMixin, ResourceRelationship):
-    schema = schemas.SampleSchema
-    data_layer = dict(session=db.session, model=models.Sample)
-
-
-class ReportMetaTypeList(PermissionsMixin, ResourceList):
-    view_kwargs = True
-    schema = schemas.ReportMetaTypeSchema
-    data_layer = dict(session=db.session, model=models.ReportMeta)
-
-    # def _list_query(self, **kwargs):
-    def get_collection(self, qs, kwargs, filters=None):
-        # We override the query because this resource is basically simulated, and doesn't correspond to an underlying
-        # model
-        query = (
-            db.session.query(models.ReportMeta)
-            .with_entities(models.ReportMeta.report_meta_key)
-            .distinct()
-        )
-
-        return query.count(), query.all()
-
-
-class SampleData(PermissionsMixin, ResourceDetail):
-    view_kwargs = True
-    schema = schemas.SampleDataSchema
-    data_layer = dict(session=db.session, model=models.SampleData)
-
-
-class SampleDataList(PermissionsMixin, ResourceList):
-    view_kwargs = True
-    schema = schemas.SampleDataSchema
-    data_layer = dict(session=db.session, model=models.SampleData)
-
-
-class SampleDataRelationship(PermissionsMixin, ResourceRelationship):
-    schema = schemas.SampleDataSchema
-    data_layer = dict(session=db.session, model=models.SampleData)
-
-
-class DataType(PermissionsMixin, ResourceDetail):
-    schema = schemas.SampleDataTypeSchema
-    data_layer = dict(session=db.session, model=models.SampleDataType)
-
-
-class DataTypeList(PermissionsMixin, ResourceList):
-    view_kwargs = True
-    schema = schemas.SampleDataTypeSchema
-    data_layer = dict(session=db.session, model=models.SampleDataType)
-
-
-class User(PermissionsMixin, ResourceDetail):
-    schema = schemas.UserSchema
-    data_layer = dict(session=db.session, model=user_models.User)
-
-
-class UserRelationship(PermissionsMixin, ResourceRelationship):
-    schema = schemas.UserSchema
-    data_layer = dict(session=db.session, model=user_models.User)
-
-
-class UserList(ResourceList):
-    view_kwargs = True
-    schema = schemas.UserSchema
-    data_layer = dict(session=db.session, model=user_models.User)
-
-    @api_perms(Permission.USER)
-    def get(self, **kwargs):
-        return super().get(**kwargs)
-
-    # We allow this endpoint to be hit by a non user, to allow the first user to be created
-    @api_perms(Permission.NONUSER)
-    def post(self, **kwargs):
-        return super().post(**kwargs)
-
-    def post_schema_kwargs(self, args, kwargs):
-        # None of these fields should be set directly by a user
-        if kwargs["permission"] < utils.Permission.ADMIN:
-            return {"dump_only": ["admin", "active", "salt", "api_token"]}
-        else:
-            return {}
-
-    def get_schema_kwargs(self, args, kwargs):
-        # Only show the filepath if they're an admin
-        if "user" in kwargs and kwargs["permission"] <= utils.Permission.ADMIN:
-            return {"exclude": ["reports", "salt", "api_token"]}
-
-        return {}
-
-    def create_object(self, data, kwargs):
-        # This is mostly copied from flapison.data_layers.alchemy
-        relationship_fields = get_relationships(self.schema, model_field=True)
-        nested_fields = get_nested_fields(self.schema, model_field=True)
-        join_fields = relationship_fields + nested_fields
-        new_user = self.data_layer["model"](
-            **{key: value for (key, value) in data.items() if key not in join_fields}
-        )
-        self._data_layer.apply_relationships(data, new_user)
-        self._data_layer.apply_nested_fields(data, new_user)
-        # Creating a user requires generating a password
-        new_user.enforce_admin()
-        new_user.set_password(data["password"])
-        new_user.save()
-        return new_user
-
-
-class CurrentUser(PermissionsMixin, ResourceDetail):
-    schema = schemas.UserSchema
-    data_layer = dict(session=db.session, model=user_models.User)
-
-    @login_required
-    def get(self, **kwargs):
-        """
-        Get details about the current user.
-
-        This is also how the frontend can get an access token. For that reason, this
-        endpoint is authenticated using the session, NOT the access token
-        """
-
-        # Fail if we aren't logged in
-        if current_user.is_anonymous:
-            return "", HTTPStatus.UNAUTHORIZED
-
-        user = (
-            db.session.query(user_models.User)
-            .filter(user_models.User.user_id == current_user.user_id)
-            .first_or_404()
-        )
-
-        if current_user.is_admin:
-            # If an admin is making this request, give them everything
-            schema_kwargs = {}
-        else:
-            # If it's a user requesting their own data, exclude password info
-            schema_kwargs = {"exclude": ["salt", "password"]}
-
-        return schemas.UserSchema(many=False, **schema_kwargs).dump(user)
-
-
-class FilterList(PermissionsMixin, ResourceList):
-    view_kwargs = True
-    schema = schemas.SampleFilterSchema
-    data_layer = dict(session=db.session, model=models.SampleFilter)
-
-
-class Filter(PermissionsMixin, ResourceDetail):
-    schema = schemas.SampleFilterSchema
-    data_layer = dict(session=db.session, model=models.SampleFilter)
-
-
-class FilterRelationship(PermissionsMixin, ResourceRelationship):
-    schema = schemas.SampleFilterSchema
-    data_layer = dict(session=db.session, model=models.SampleFilter)
-
-
-class FilterGroupList(PermissionsMixin, ResourceList):
-    view_kwargs = True
-    schema = schemas.FilterGroupSchema
-    data_layer = dict(session=db.session, model=models.SampleFilter)
-
-    def get_collection(self, qs, kwargs, filters=None):
-        query = (
-            self._data_layer.query(kwargs)
-            .with_entities(models.SampleFilter.sample_filter_tag)
-            .distinct()
-        )
-
-        return query.count(), query.all()
-
-
-class FavouritePlotList(PermissionsMixin, ResourceList):
-    view_kwargs = True
-    schema = schemas.FavouritePlotSchema
-    data_layer = dict(session=db.session, model=models.PlotFavourite)
-
-
-class FavouritePlot(PermissionsMixin, ResourceDetail):
-    schema = schemas.FavouritePlotSchema
-    data_layer = dict(session=db.session, model=models.PlotFavourite)
-
-
-class FavouritePlotRelationship(PermissionsMixin, ResourceRelationship):
-    schema = schemas.FavouritePlotSchema
-    data_layer = dict(session=db.session, model=models.PlotFavourite)
-
-
-class DashboardList(PermissionsMixin, ResourceList):
-    view_kwargs = True
-    schema = schemas.DashboardSchema
-    data_layer = dict(session=db.session, model=models.Dashboard)
-
-
-class DashboardRelationship(PermissionsMixin, ResourceList):
-    view_kwargs = True
-    schema = schemas.DashboardSchema
-    data_layer = dict(session=db.session, model=models.Dashboard)
-
-
-class Dashboard(PermissionsMixin, ResourceDetail):
-    schema = schemas.DashboardSchema
-    data_layer = dict(session=db.session, model=models.Dashboard)
-
-
-class TrendSeries(PermissionsMixin, ResourceList):
-    @use_args(schemas.TrendInputSchema(), locations=("querystring",))
-    def get(self, args):
-        # We need to give each resource a unique ID so the client doesn't try to cache
-        # or reconcile different plots
-        request_hash = sha1(request.query_string).hexdigest()
-
-        plots = plot.trend_data(plot_prefix=request_hash, **args)
-
-        return schemas.TrendSchema(many=True, unknown=INCLUDE).dump(plots)
-
-
-json_api.route(Upload, "upload", "/uploads/<int:id>")
-json_api.route(UploadList, "uploadlist", "/uploads")
-json_api.route(UploadList, "user_uploadlist", "/users/<int:id>/uploads")
-json_api.route(
-    UploadRelationship, "userupload", "/users/<int:id>/relationships/uploads"
-)
-
-json_api.route(Report, "report", "/reports/<int:id>")
-json_api.route(ReportList, "reportlist", "/reports")
-json_api.route(ReportList, "user_reportlist", "/users/<int:id>/reports")
-json_api.route(
-    ReportRelationship, "report_samples_rel", "/reports/<int:id>/relationships/samples"
-)
-
-json_api.route(User, "user", "/users/<int:id>")
-json_api.route(UserList, "userlist", "/users")
-json_api.route(CurrentUser, "currentuser", "/users/current")
-json_api.route(
-    UserRelationship, "user_reports_rel", "/users/<int:id>/relationships/reports"
-)
-json_api.route(
-    UserRelationship, "user_filters_rel", "/users/<int:id>/relationships/filters"
-)
-
-json_api.route(ReportMeta, "reportmeta", "/report_meta/<int:id>")
-json_api.route(ReportMetaList, "reportmetalist", "/report_meta")
-json_api.route(ReportMetaList, "report_reportmetalist", "/reports/<int:id>/report_meta")
-json_api.route(
-    ReportMetaRelationship,
-    "report_reportmeta_rel",
-    "/reports/<int:id>/relationships/report_meta",
-)
-
-json_api.route(Sample, "sample", "/samples/<int:id>")
-json_api.route(SampleList, "samplelist", "/samples")
-json_api.route(SampleList, "report_samplelist", "/reports/<int:id>/samples")
-
-json_api.route(ReportMetaTypeList, "metatypelist", "/meta_types")
-
-json_api.route(SampleData, "sampledata", "/sample_data/<int:id>")
-json_api.route(SampleDataList, "sampledatalist", "/sample_data")
-json_api.route(SampleDataList, "sample_sampledatalist", "/samples/<int:id>/sample_data")
-json_api.route(
-    SampleDataRelationship,
-    "sample_sampledata",
-    "/samples/<int:id>/relationships/sample_data",
-)
-
-json_api.route(DataType, "datatype", "/data_types/<int:id>")
-json_api.route(DataTypeList, "datatypelist", "/data_types")
-
-json_api.route(
-    Filter,
-    "filter",
-    "/filters/<int:id>",
-)
-json_api.route(FilterList, "filterlist", "/filters")
-json_api.route(FilterList, "user_filterlist", "/users/<int:id>/filters")
-
-json_api.route(FilterGroupList, "filtergrouplist", "/filter_groups")
-
-json_api.route(FavouritePlot, "favouriteplot", "/favourites/<int:id>")
-json_api.route(FavouritePlotList, "favouriteplotlist", "/favourites")
-json_api.route(
-    FavouritePlotList, "user_favouriteplotlist", "/users/<int:id>/favourites"
-)
-json_api.route(
-    FavouritePlotRelationship,
-    "user_favourites_rel",
-    "/users/<int:id>/relationships/favourites",
-)
-
-json_api.route(Dashboard, "dashboard", "/dashboards/<int:id>")
-json_api.route(DashboardList, "dashboardlist", "/dashboards")
-json_api.route(DashboardList, "user_dashboardlist", "/users/<int:id>/dashboards")
-json_api.route(
-    DashboardRelationship,
-    "user_dashboards_rel",
-    "/users/<int:id>/relationships/dashboards",
-)
-
-json_api.route(TrendSeries, "trend_data", "/plots/trends/series")
+rest_api_router = APIRouter(tags=["rest_api"])
+
+
+# Pydantic response models
+class UploadResponse(BaseModel):
+    id: int
+    status: str
+    path: Optional[str] = None
+    message: Optional[str] = None
+    user_id: int
+
+    class Config:
+        from_attributes = True
+
+
+class ReportResponse(BaseModel):
+    report_id: int
+    title: str
+    created_at: Optional[str] = None
+    user_id: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
+
+class SampleResponse(BaseModel):
+    sample_id: int
+    sample_name: str
+    report_id: int
+
+    class Config:
+        from_attributes = True
+
+
+class UserResponse(BaseModel):
+    user_id: int
+    username: str
+    email: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    active: bool
+    is_admin: bool
+
+    class Config:
+        from_attributes = True
+
+
+# Upload endpoints
+@rest_api_router.get("/uploads")
+async def list_uploads(
+    session: AsyncSession = Depends(get_async_session),
+    user: user_models.User = Depends(get_current_active_user),
+) -> List[Dict[str, Any]]:
+    """List all uploads."""
+    result = await session.execute(select(models.Upload))
+    uploads = result.scalars().all()
+    return [{"id": u.upload_id, "status": u.status, "message": u.message, "user_id": u.user_id} for u in uploads]
+
+
+@rest_api_router.get("/uploads/{upload_id}")
+async def get_upload(
+    upload_id: int,
+    session: AsyncSession = Depends(get_async_session),
+    user: user_models.User = Depends(get_current_active_user),
+) -> Dict[str, Any]:
+    """Get a specific upload."""
+    result = await session.execute(select(models.Upload).where(models.Upload.upload_id == upload_id))
+    upload = result.scalar_one_or_none()
+    if not upload:
+        raise HTTPException(status_code=404, detail="Upload not found")
+    return {"id": upload.upload_id, "status": upload.status, "message": upload.message, "user_id": upload.user_id}
+
+
+@rest_api_router.post("/uploads", status_code=status.HTTP_201_CREATED)
+async def create_upload(
+    report: UploadFile = File(...),
+    session: AsyncSession = Depends(get_async_session),
+    user: user_models.User = Depends(get_current_active_user),
+) -> Dict[str, Any]:
+    """Upload a new report."""
+    file_name = utils.get_unique_filename()
+    content = await report.read()
+    with open(file_name, "wb") as f:
+        f.write(content)
+
+    upload_row = models.Upload(
+        status="NOT TREATED",
+        path=file_name,
+        message="File has been created, loading in MegaQC is queued.",
+        user_id=user.user_id,
+    )
+    session.add(upload_row)
+    await session.commit()
+    await session.refresh(upload_row)
+
+    return {"id": upload_row.upload_id, "status": upload_row.status, "message": upload_row.message}
+
+
+# Report endpoints
+@rest_api_router.get("/reports")
+async def list_reports(
+    session: AsyncSession = Depends(get_async_session),
+    user: user_models.User = Depends(get_current_active_user),
+) -> List[Dict[str, Any]]:
+    """List all reports."""
+    result = await session.execute(select(models.Report))
+    reports = result.scalars().all()
+    return [{"report_id": r.report_id, "title": r.title, "user_id": r.user_id} for r in reports]
+
+
+@rest_api_router.get("/reports/{report_id}")
+async def get_report(
+    report_id: int,
+    session: AsyncSession = Depends(get_async_session),
+    user: user_models.User = Depends(get_current_active_user),
+) -> Dict[str, Any]:
+    """Get a specific report."""
+    result = await session.execute(select(models.Report).where(models.Report.report_id == report_id))
+    report = result.scalar_one_or_none()
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+    return {"report_id": report.report_id, "title": report.title, "user_id": report.user_id}
+
+
+# Sample endpoints
+@rest_api_router.get("/samples")
+async def list_samples(
+    session: AsyncSession = Depends(get_async_session),
+    user: user_models.User = Depends(get_current_active_user),
+) -> List[Dict[str, Any]]:
+    """List all samples."""
+    result = await session.execute(select(models.Sample))
+    samples = result.scalars().all()
+    return [{"sample_id": s.sample_id, "sample_name": s.sample_name, "report_id": s.report_id} for s in samples]
+
+
+@rest_api_router.get("/samples/{sample_id}")
+async def get_sample(
+    sample_id: int,
+    session: AsyncSession = Depends(get_async_session),
+    user: user_models.User = Depends(get_current_active_user),
+) -> Dict[str, Any]:
+    """Get a specific sample."""
+    result = await session.execute(select(models.Sample).where(models.Sample.sample_id == sample_id))
+    sample = result.scalar_one_or_none()
+    if not sample:
+        raise HTTPException(status_code=404, detail="Sample not found")
+    return {"sample_id": sample.sample_id, "sample_name": sample.sample_name, "report_id": sample.report_id}
+
+
+# Report Meta endpoints
+@rest_api_router.get("/report_meta")
+async def list_report_meta(
+    session: AsyncSession = Depends(get_async_session),
+    user: user_models.User = Depends(get_current_active_user),
+) -> List[Dict[str, Any]]:
+    """List all report metadata."""
+    result = await session.execute(select(models.ReportMeta))
+    metas = result.scalars().all()
+    return [{"id": m.report_meta_id, "key": m.report_meta_key, "value": m.report_meta_value} for m in metas]
+
+
+@rest_api_router.get("/meta_types")
+async def list_meta_types(
+    session: AsyncSession = Depends(get_async_session),
+    user: user_models.User = Depends(get_current_active_user),
+) -> List[str]:
+    """List distinct report meta types."""
+    result = await session.execute(
+        select(distinct(models.ReportMeta.report_meta_key))
+    )
+    return [row[0] for row in result.all()]
+
+
+# Sample Data endpoints
+@rest_api_router.get("/sample_data")
+async def list_sample_data(
+    session: AsyncSession = Depends(get_async_session),
+    user: user_models.User = Depends(get_current_active_user),
+) -> List[Dict[str, Any]]:
+    """List all sample data."""
+    result = await session.execute(select(models.SampleData))
+    data = result.scalars().all()
+    return [{"id": d.sample_data_id, "value": d.value, "sample_id": d.sample_id} for d in data]
+
+
+# Data Type endpoints
+@rest_api_router.get("/data_types")
+async def list_data_types(
+    session: AsyncSession = Depends(get_async_session),
+    user: user_models.User = Depends(get_current_active_user),
+) -> List[Dict[str, Any]]:
+    """List all data types."""
+    result = await session.execute(select(models.SampleDataType))
+    types = result.scalars().all()
+    return [{"id": t.sample_data_type_id, "key": t.data_key, "section": t.data_section} for t in types]
+
+
+# User endpoints
+@rest_api_router.get("/users")
+async def list_users(
+    session: AsyncSession = Depends(get_async_session),
+    user: user_models.User = Depends(get_current_active_user),
+) -> List[Dict[str, Any]]:
+    """List all users."""
+    result = await session.execute(select(user_models.User))
+    users = result.scalars().all()
+    return [
+        {"user_id": u.user_id, "username": u.username, "email": u.email, "active": u.active, "is_admin": u.is_admin}
+        for u in users
+    ]
+
+
+@rest_api_router.get("/users/current")
+async def get_current_user_info(
+    user: user_models.User = Depends(get_current_active_user),
+) -> Dict[str, Any]:
+    """Get current user info."""
+    return {
+        "user_id": user.user_id,
+        "username": user.username,
+        "email": user.email,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "active": user.active,
+        "is_admin": user.is_admin,
+        "api_token": user.api_token,
+    }
+
+
+@rest_api_router.get("/users/{user_id}")
+async def get_user(
+    user_id: int,
+    session: AsyncSession = Depends(get_async_session),
+    user: user_models.User = Depends(get_current_active_user),
+) -> Dict[str, Any]:
+    """Get a specific user."""
+    result = await session.execute(select(user_models.User).where(user_models.User.user_id == user_id))
+    target_user = result.scalar_one_or_none()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {
+        "user_id": target_user.user_id,
+        "username": target_user.username,
+        "email": target_user.email,
+        "active": target_user.active,
+        "is_admin": target_user.is_admin,
+    }
+
+
+class CreateUserRequest(BaseModel):
+    username: str
+    email: str
+    password: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+
+
+@rest_api_router.post("/users", status_code=status.HTTP_201_CREATED)
+async def create_user(
+    user_data: CreateUserRequest,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: Optional[user_models.User] = Depends(get_current_user),
+) -> Dict[str, Any]:
+    """Create a new user."""
+    new_user = user_models.User(
+        username=user_data.username,
+        email=user_data.email,
+        first_name=user_data.first_name,
+        last_name=user_data.last_name,
+    )
+    await new_user.enforce_admin_async(session)
+    new_user.set_password(user_data.password)
+    session.add(new_user)
+    await session.commit()
+    await session.refresh(new_user)
+    return {"user_id": new_user.user_id, "username": new_user.username, "email": new_user.email}
+
+
+# Filter endpoints
+@rest_api_router.get("/filters")
+async def list_filters(
+    session: AsyncSession = Depends(get_async_session),
+    user: user_models.User = Depends(get_current_active_user),
+) -> List[Dict[str, Any]]:
+    """List all filters."""
+    result = await session.execute(select(models.SampleFilter))
+    filters = result.scalars().all()
+    return [
+        {"id": f.sample_filter_id, "name": f.sample_filter_name, "tag": f.sample_filter_tag, "user_id": f.user_id}
+        for f in filters
+    ]
+
+
+@rest_api_router.get("/filter_groups")
+async def list_filter_groups(
+    session: AsyncSession = Depends(get_async_session),
+    user: user_models.User = Depends(get_current_active_user),
+) -> List[str]:
+    """List distinct filter groups."""
+    result = await session.execute(
+        select(distinct(models.SampleFilter.sample_filter_tag))
+    )
+    return [row[0] for row in result.all() if row[0]]
+
+
+# Favourite Plot endpoints
+@rest_api_router.get("/favourites")
+async def list_favourites(
+    session: AsyncSession = Depends(get_async_session),
+    user: user_models.User = Depends(get_current_active_user),
+) -> List[Dict[str, Any]]:
+    """List all favourite plots."""
+    result = await session.execute(select(models.PlotFavourite))
+    favs = result.scalars().all()
+    return [
+        {"id": f.plot_favourite_id, "title": f.title, "plot_type": f.plot_type, "user_id": f.user_id}
+        for f in favs
+    ]
+
+
+@rest_api_router.get("/favourites/{favourite_id}")
+async def get_favourite(
+    favourite_id: int,
+    session: AsyncSession = Depends(get_async_session),
+    user: user_models.User = Depends(get_current_active_user),
+) -> Dict[str, Any]:
+    """Get a specific favourite plot."""
+    result = await session.execute(
+        select(models.PlotFavourite).where(models.PlotFavourite.plot_favourite_id == favourite_id)
+    )
+    fav = result.scalar_one_or_none()
+    if not fav:
+        raise HTTPException(status_code=404, detail="Favourite not found")
+    return {"id": fav.plot_favourite_id, "title": fav.title, "plot_type": fav.plot_type, "data": fav.data}
+
+
+# Dashboard endpoints
+@rest_api_router.get("/dashboards")
+async def list_dashboards(
+    session: AsyncSession = Depends(get_async_session),
+    user: user_models.User = Depends(get_current_active_user),
+) -> List[Dict[str, Any]]:
+    """List all dashboards."""
+    result = await session.execute(select(models.Dashboard))
+    dashboards = result.scalars().all()
+    return [
+        {"id": d.dashboard_id, "title": d.title, "is_public": d.is_public, "user_id": d.user_id}
+        for d in dashboards
+    ]
+
+
+@rest_api_router.get("/dashboards/{dashboard_id}")
+async def get_dashboard(
+    dashboard_id: int,
+    session: AsyncSession = Depends(get_async_session),
+    user: user_models.User = Depends(get_current_active_user),
+) -> Dict[str, Any]:
+    """Get a specific dashboard."""
+    result = await session.execute(
+        select(models.Dashboard).where(models.Dashboard.dashboard_id == dashboard_id)
+    )
+    dashboard = result.scalar_one_or_none()
+    if not dashboard:
+        raise HTTPException(status_code=404, detail="Dashboard not found")
+    return {"id": dashboard.dashboard_id, "title": dashboard.title, "data": dashboard.data, "is_public": dashboard.is_public}
+
+
+# Trend data endpoint
+class TrendQueryParams(BaseModel):
+    filter_id: Optional[int] = None
+    data_type_id: Optional[int] = None
+    center: Optional[str] = "mean"
+    spread: Optional[str] = "stddev"
+
+
+@rest_api_router.get("/plots/trends/series")
+async def get_trend_series(
+    filter_id: Optional[int] = Query(None),
+    data_type_id: Optional[int] = Query(None),
+    center: str = Query("mean"),
+    spread: str = Query("stddev"),
+    request: Request = None,
+    session: AsyncSession = Depends(get_async_session),
+    user: user_models.User = Depends(get_current_active_user),
+) -> List[Dict[str, Any]]:
+    """Get trend series data for plotting."""
+    # Generate unique ID for caching
+    query_string = str(request.query_params) if request else ""
+    request_hash = sha1(query_string.encode()).hexdigest()
+
+    # Call the plot function
+    plots = await plot.trend_data_async(
+        session,
+        plot_prefix=request_hash,
+        filter_id=filter_id,
+        data_type_id=data_type_id,
+        center=center,
+        spread=spread,
+    )
+
+    return plots
+
+
+# User-specific resource endpoints
+@rest_api_router.get("/users/{user_id}/uploads")
+async def get_user_uploads(
+    user_id: int,
+    session: AsyncSession = Depends(get_async_session),
+    user: user_models.User = Depends(get_current_active_user),
+) -> List[Dict[str, Any]]:
+    """Get uploads for a specific user."""
+    result = await session.execute(select(models.Upload).where(models.Upload.user_id == user_id))
+    uploads = result.scalars().all()
+    return [{"id": u.upload_id, "status": u.status, "message": u.message} for u in uploads]
+
+
+@rest_api_router.get("/users/{user_id}/reports")
+async def get_user_reports(
+    user_id: int,
+    session: AsyncSession = Depends(get_async_session),
+    user: user_models.User = Depends(get_current_active_user),
+) -> List[Dict[str, Any]]:
+    """Get reports for a specific user."""
+    result = await session.execute(select(models.Report).where(models.Report.user_id == user_id))
+    reports = result.scalars().all()
+    return [{"report_id": r.report_id, "title": r.title} for r in reports]
+
+
+@rest_api_router.get("/users/{user_id}/filters")
+async def get_user_filters(
+    user_id: int,
+    session: AsyncSession = Depends(get_async_session),
+    user: user_models.User = Depends(get_current_active_user),
+) -> List[Dict[str, Any]]:
+    """Get filters for a specific user."""
+    result = await session.execute(select(models.SampleFilter).where(models.SampleFilter.user_id == user_id))
+    filters = result.scalars().all()
+    return [{"id": f.sample_filter_id, "name": f.sample_filter_name, "tag": f.sample_filter_tag} for f in filters]
+
+
+@rest_api_router.get("/users/{user_id}/favourites")
+async def get_user_favourites(
+    user_id: int,
+    session: AsyncSession = Depends(get_async_session),
+    user: user_models.User = Depends(get_current_active_user),
+) -> List[Dict[str, Any]]:
+    """Get favourite plots for a specific user."""
+    result = await session.execute(select(models.PlotFavourite).where(models.PlotFavourite.user_id == user_id))
+    favs = result.scalars().all()
+    return [{"id": f.plot_favourite_id, "title": f.title, "plot_type": f.plot_type} for f in favs]
+
+
+@rest_api_router.get("/users/{user_id}/dashboards")
+async def get_user_dashboards(
+    user_id: int,
+    session: AsyncSession = Depends(get_async_session),
+    user: user_models.User = Depends(get_current_active_user),
+) -> List[Dict[str, Any]]:
+    """Get dashboards for a specific user."""
+    result = await session.execute(select(models.Dashboard).where(models.Dashboard.user_id == user_id))
+    dashboards = result.scalars().all()
+    return [{"id": d.dashboard_id, "title": d.title, "is_public": d.is_public} for d in dashboards]
+
+
+@rest_api_router.get("/reports/{report_id}/samples")
+async def get_report_samples(
+    report_id: int,
+    session: AsyncSession = Depends(get_async_session),
+    user: user_models.User = Depends(get_current_active_user),
+) -> List[Dict[str, Any]]:
+    """Get samples for a specific report."""
+    result = await session.execute(select(models.Sample).where(models.Sample.report_id == report_id))
+    samples = result.scalars().all()
+    return [{"sample_id": s.sample_id, "sample_name": s.sample_name} for s in samples]
+
+
+@rest_api_router.get("/reports/{report_id}/report_meta")
+async def get_report_meta(
+    report_id: int,
+    session: AsyncSession = Depends(get_async_session),
+    user: user_models.User = Depends(get_current_active_user),
+) -> List[Dict[str, Any]]:
+    """Get metadata for a specific report."""
+    result = await session.execute(select(models.ReportMeta).where(models.ReportMeta.report_id == report_id))
+    metas = result.scalars().all()
+    return [{"id": m.report_meta_id, "key": m.report_meta_key, "value": m.report_meta_value} for m in metas]
+
+
+@rest_api_router.get("/samples/{sample_id}/sample_data")
+async def get_sample_data(
+    sample_id: int,
+    session: AsyncSession = Depends(get_async_session),
+    user: user_models.User = Depends(get_current_active_user),
+) -> List[Dict[str, Any]]:
+    """Get data for a specific sample."""
+    result = await session.execute(select(models.SampleData).where(models.SampleData.sample_id == sample_id))
+    data = result.scalars().all()
+    return [{"id": d.sample_data_id, "value": d.value} for d in data]

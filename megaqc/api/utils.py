@@ -1,9 +1,17 @@
 # -*- coding: utf-8 -*-
+"""
+API utility functions for MegaQC.
+
+NOTE: This module is in the process of being migrated from Flask to FastAPI.
+Many functions still use synchronous database operations and will need to be
+converted to async patterns for full FastAPI compatibility.
+"""
 
 from __future__ import division
 
 import copy
 import json
+import logging
 import os
 import random
 import string
@@ -12,14 +20,15 @@ from builtins import map, range, str
 from collections import OrderedDict, defaultdict
 from datetime import datetime, timedelta
 from hashlib import md5
+from typing import Any, Dict, List, Optional, Tuple
 
 import plotly.figure_factory as ff
 import plotly.graph_objs as go
 import plotly.offline as py
-from flask import current_app
 from past.utils import old_div
-from sqlalchemy import Numeric, cast, distinct, func, or_
+from sqlalchemy import Numeric, cast, distinct, func, or_, select
 from sqlalchemy.exc import InvalidRequestError
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 from sqlalchemy.sql import and_, not_, or_
 
@@ -28,17 +37,15 @@ from megaqc.api.constants import (
     type_to_tables_fields,
     valid_join_conditions,
 )
-from megaqc.extensions import db
 from megaqc.model.models import *
+from megaqc.settings import get_settings
 from megaqc.user.models import User
 from megaqc.utils import settings
 
-if sys.version_info.major == 2:
-    lc_string = string.lowercase
-elif sys.version_info.major == 3:
-    lc_string = string.ascii_lowercase
-else:
-    raise (Exception("Unsupported python version"))
+logger = logging.getLogger(__name__)
+
+# Python 3 only
+lc_string = string.ascii_lowercase
 
 
 def generate_hash(d):

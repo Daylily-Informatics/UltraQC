@@ -1,5 +1,10 @@
+"""
+Tests for upload functionality.
+"""
+from importlib import resources
+from pathlib import Path
+
 import pytest
-from pkg_resources import resource_stream
 
 from megaqc.model import models
 from megaqc.rest_api import schemas
@@ -20,15 +25,18 @@ def test_post_upload_list(db, client, token):
     """
     count_1 = db.session.query(models.Upload).count()
 
-    rv = client.post(
-        "/rest_api/v1/uploads",
-        data={"report": resource_stream("tests", "multiqc_data.json")},
-        headers={
-            "access_token": token,
-            "Content-Type": "multipart/form-data",
-            "Accept": "application/json",
-        },
-    )
+    # Use importlib.resources to get the test data file
+    test_data_path = Path(__file__).parent.parent / "multiqc_data.json"
+    with open(test_data_path, "rb") as f:
+        rv = client.post(
+            "/rest_api/v1/uploads",
+            data={"report": f},
+            headers={
+                "access_token": token,
+                "Content-Type": "multipart/form-data",
+                "Accept": "application/json",
+            },
+        )
 
     # Check the request was successful
     assert rv.status_code == 201, rv.json

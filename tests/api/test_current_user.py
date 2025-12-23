@@ -1,46 +1,52 @@
+"""
+Tests for current user API endpoint.
+
+NOTE: These tests are being migrated from Flask to FastAPI.
+"""
 import pytest
-from flask_login import login_user
-from pkg_resources import resource_stream
 
 from megaqc.model import models
-from megaqc.rest_api import schemas
 from tests import factories
 
 
-def test_current_user_session_working(session, token, app):
+@pytest.mark.asyncio
+async def test_current_user_session_working(db_session, client, token):
     """
-    Test the current_user endpoint, using a valid session.
+    Test the current_user endpoint, using a valid token.
 
-    This should work
+    This should work.
     """
     # Create a user
-    user = factories.UserFactory()
-    session.add(user)
-    session.commit()
+    user = factories.UserFactory.build()
+    user.set_password("password")
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
 
-    # Login with that user (we have to use a custom client here)
-    with app.test_client(user=user) as client:
-        rv = client.get("/rest_api/v1/users/current")
+    # Make request with the user's token
+    response = await client.get(
+        "/rest_api/v1/users/current",
+        headers={"access_token": user.api_token}
+    )
 
     # Check the request was successful
-    assert rv.status_code == 200, rv.json
-
-    # Validate the response
-    schemas.UserSchema().validate(rv.json)
+    assert response.status_code == 200, response.text
 
 
-def test_current_user_session_invalid(session, client, token):
+@pytest.mark.asyncio
+async def test_current_user_session_invalid(db_session, client):
     """
-    Test the current_user endpoint, using a valid session.
+    Test the current_user endpoint without authentication.
 
-    This should work
+    This should fail with 401.
     """
-    # Create a user
-    user = factories.UserFactory()
-    session.add(user)
-    session.commit()
+    # Create a user but don't authenticate
+    user = factories.UserFactory.build()
+    user.set_password("password")
+    db_session.add(user)
+    await db_session.commit()
 
-    rv = client.get("/rest_api/v1/users/current")
+    response = await client.get("/rest_api/v1/users/current")
 
     # Check the request was unauthorized
-    assert rv.status_code == 401
+    assert response.status_code == 401

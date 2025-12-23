@@ -9,17 +9,16 @@ from typing import Any, Callable, Dict, Optional, Type, Union
 from factory import (
     Factory,
     Faker,
+    LazyAttribute,
     PostGenerationMethodCall,
     RelatedFactoryList,
     SelfAttribute,
     Sequence,
     SubFactory,
 )
-from factory.alchemy import SQLAlchemyModelFactory
 from factory.builder import BuildStep, Resolver
 from factory.fuzzy import FuzzyChoice
 
-from megaqc.database import db
 from megaqc.model import models
 from megaqc.user.models import User
 
@@ -73,9 +72,11 @@ class SubFactoryList(SubFactory):
         return self.into((evaluator() for _ in range(self.size)))
 
 
-class BaseFactory(SQLAlchemyModelFactory):
+class BaseFactory(Factory):
     """
-    Base factory.
+    Base factory for creating model instances.
+
+    Note: For async tests, instances should be added to the session manually.
     """
 
     class Meta:
@@ -84,7 +85,6 @@ class BaseFactory(SQLAlchemyModelFactory):
         """
 
         abstract = True
-        sqlalchemy_session = db.session
 
 
 class UserFactory(BaseFactory):
