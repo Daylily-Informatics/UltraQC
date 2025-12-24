@@ -17,22 +17,22 @@ If you’re doing development work, you need access to the source code
 
 .. code:: bash
 
-   git clone https://github.com/MultiQC/MegaQC/
+   git clone https://github.com/MultiQC/UltraQC/
 
 2. Install Dependencies
 ------------------------------------------------
 
-You should install MegaQC using Poetry. You also need to install MegaQC and all its dependencies there:
+You should install UltraQC using Poetry. You also need to install UltraQC and all its dependencies there:
 
 .. code:: bash
 
-   cd MegaQC
+   cd UltraQC
    poetry install
 
 3. Install poetry shell
 ------------------------------------------------
 
-You need to use poetry shell before running MegaQC.
+You need to use poetry shell before running UltraQC.
 
 .. code:: bash
 
@@ -41,7 +41,7 @@ You need to use poetry shell before running MegaQC.
 4. Enable development mode:
 ---------------------------
 
-Setting this bash variable runs MegaQC in development mode. This means
+Setting this bash variable runs UltraQC in development mode. This means
 that it will show full Python exception tracebacks in the web browser as
 well as additional Flask plugins which help with debugging and
 performance testing.
@@ -53,38 +53,38 @@ performance testing.
 5. Set up the database
 ----------------------
 
-Running this command creates an empty SQLite MegaQC database file in the
-installation directory called ``megaqc.db``
+Running this command creates an empty SQLite UltraQC database file in the
+installation directory called ``ultraqc.db``
 
 .. code:: bash
 
-   megaqc initdb
+   ultraqc initdb
 
-6. Start megaqc
+6. Start ultraqc
 ---------------
 
-Start MegaQC.
+Start UltraQC.
 
 .. code:: bash
 
-   megaqc run
+   ultraqc run
 
 You will have to run the rest of these commands **in another terminal
-window**, because ``megaqc run`` blocks the terminal.
+window**, because ``ultraqc run`` blocks the terminal.
 
 7. Setup your access key
 ------------------------
 
--  Login to MegaQC in your browser by browsing to
+-  Login to UltraQC in your browser by browsing to
    http://localhost:5000/register/ (the port might differ, it will
-   depend on what was output in the ``megaqc run`` stage previously
+   depend on what was output in the ``ultraqc run`` stage previously
 -  Once registered, visit http://localhost:5000/users/multiqc_config and
    follow the instructions there to configure your access token in
    ``~/.multiqc_config.yaml``.
 -  Note: if you you’d rather not pollute your home directory, you can
    instead name the file ``multiqc_config.yaml`` and place it in the
-   current (MegaQC) directory. However, you will then have to run
-   ``megaqc upload`` from that directory each time
+   current (UltraQC) directory. However, you will then have to run
+   ``ultraqc upload`` from that directory each time
 
 8. Load test data
 -----------------
@@ -95,7 +95,7 @@ In order to develop new features you need some data to test it with:
 
    git clone https://github.com/TMiguelT/1000gFastqc
    for report in $(find 1000gFastqc -name '*.json')
-       do megaqc upload $report
+       do ultraqc upload $report
    done
 
 9. Install the JavaScript and start compiling
@@ -112,7 +112,7 @@ changes to the JavaScript are compiled instantly:
 10. Install the pre-commit hooks
 -------------------------------
 
-MegaQC has a number of `pre-commit`_ hooks installed, which
+UltraQC has a number of `pre-commit`_ hooks installed, which
 automatically format and check your code before you commit.
 To set it up, run:
 
@@ -129,7 +129,7 @@ If it lets you write a commit message then everything has succeeded.
 Next Steps
 ----------
 
-You should now have a fully functional MegaQC test server running,
+You should now have a fully functional UltraQC test server running,
 accessible on your localhost at http://127.0.0.1:5000
 
 .. _node: https://nodejs.org/en/download/

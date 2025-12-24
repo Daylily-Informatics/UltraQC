@@ -1,16 +1,16 @@
 Documentation
 ===============
 
-MegaQC uses `Sphinx <https://www.sphinx-doc.org/en/master/>`_ to build the documentation
+UltraQC uses `Sphinx <https://www.sphinx-doc.org/en/master/>`_ to build the documentation
 and `Github Pages <https://pages.github.com/>`_ to host it.
 
 Building the documentation locally
 -------------------------------------
 
-The MegaQC documentation requires
+The UltraQC documentation requires
 
-1. An installation of MegaQC to fetch the API endpoints and the Click commands.
-2. All dependencies specified in the `docs requirements.txt <https://github.com/MultiQC/MegaQC/blob/main/docs/requirements.txt>`_.
+1. An installation of UltraQC to fetch the API endpoints and the Click commands.
+2. All dependencies specified in the `docs requirements.txt <https://github.com/MultiQC/UltraQC/blob/main/docs/requirements.txt>`_.
    Install them by invoking: ``pip install -r docs/requirements.txt``.
 
 After having installed all requirements run ``make api-docs && make html`` in the ``docs`` directory.
@@ -23,4 +23,4 @@ Publishing the documentation
 On pushes to the ``main`` branch, the documentation is automatically built and pushed
 to the ``gh-pages`` branch. The static html files on this branch are then deployed
 to Github Pages and displayed to the outside world.
-All of this is done with the `Publish Docs Github Actions workflow <https://github.com/MultiQC/MegaQC/blob/main/.github/workflows/publish_docs.yaml>`.
+All of this is done with the `Publish Docs Github Actions workflow <https://github.com/MultiQC/UltraQC/blob/main/.github/workflows/publish_docs.yaml>`.

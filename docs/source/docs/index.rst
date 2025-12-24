@@ -1,7 +1,7 @@
-Welcome to MegaQC's documentation!
+Welcome to UltraQC's documentation!
 ==================================
 
-|MegaQC|
+|UltraQC|
 
 .. toctree::
    :maxdepth: 2
@@ -23,4 +23,4 @@ Indices and tables
 * :ref:`modindex`
 * :ref:`search`
 
-.. |MegaQC| image:: https://raw.githubusercontent.com/MultiQC/MegaQC/main/megaqc/static/img/MegaQC_logo.png
+.. |UltraQC| image:: https://raw.githubusercontent.com/MultiQC/UltraQC/main/ultraqc/static/img/UltraQC_logo.png

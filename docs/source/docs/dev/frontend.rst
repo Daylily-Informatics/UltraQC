@@ -1,11 +1,11 @@
 Frontend
 ========
 
-As with the API, MegaQC is currently transitioning from using an HTML +
+As with the API, UltraQC is currently transitioning from using an HTML +
 CSS + JavaScript frontend to `React`_. This can be confusing, as a
 number of technologies are mixed in the same project.
 
-As explained in the backends section, each URL in MegaQC renders a
+As explained in the backends section, each URL in UltraQC renders a
 Jinja2 template. The old-style endpoints have a lot of HTML code in
 their `templates`_ that defines the entire page layout, and load
 JavaScript and CSS located in the `static`_ directory.
@@ -22,7 +22,7 @@ Note that all new pages going forward should be written using React, to
 improve the maintainability of the frontend.
 
 .. _React: https://reactjs.org/
-.. _templates: https://github.com/MultiQC/MegaQC/tree/main/megaqc/templates
-.. _static: https://github.com/MultiQC/MegaQC/tree/main/megaqc/static
-.. _react.html: https://github.com/MultiQC/MegaQC/tree/main/megaqc/templates/public/react.html
-.. _src: https://github.com/MultiQC/MegaQC/tree/main/src
+.. _templates: https://github.com/MultiQC/UltraQC/tree/main/ultraqc/templates
+.. _static: https://github.com/MultiQC/UltraQC/tree/main/ultraqc/static
+.. _react.html: https://github.com/MultiQC/UltraQC/tree/main/ultraqc/templates/public/react.html
+.. _src: https://github.com/MultiQC/UltraQC/tree/main/src

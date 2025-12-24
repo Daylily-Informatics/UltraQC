@@ -3,8 +3,8 @@ import itertools
 
 import pytest
 
-from megaqc.model import models
-from megaqc.rest_api.filters import DATE_FORMAT, build_filter_query
+from ultraqc.model import models
+from ultraqc.rest_api.filters import DATE_FORMAT, build_filter_query
 from tests import factories
 
 

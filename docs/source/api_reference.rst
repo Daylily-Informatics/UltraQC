@@ -1,13 +1,13 @@
-.. _megaqc_api_reference:
+.. _ultraqc_api_reference:
 
 ==========================
-MegaQC API Reference
+UltraQC API Reference
 ==========================
 
 Flask API Reference
 ===========================
 
-.. autoflask:: megaqc.app:create_app('megaqc.settings.ProdConfig')
+.. autoflask:: ultraqc.app:create_app('ultraqc.settings.ProdConfig')
    :undoc-static:
 
 
@@ -15,7 +15,7 @@ Flask Quick API Reference
 ============================
 
 
-.. qrefflask:: megaqc.app:create_app('megaqc.settings.ProdConfig')
+.. qrefflask:: ultraqc.app:create_app('ultraqc.settings.ProdConfig')
    :undoc-static:
 
 ..   https://sphinxcontrib-httpdomain.readthedocs.io/en/stable/#module-sphinxcontrib.autohttp.flask

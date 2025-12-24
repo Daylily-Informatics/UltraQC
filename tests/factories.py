@@ -19,8 +19,8 @@ from factory import (
 from factory.builder import BuildStep, Resolver
 from factory.fuzzy import FuzzyChoice
 
-from megaqc.model import models
-from megaqc.user.models import User
+from ultraqc.model import models
+from ultraqc.user.models import User
 
 
 class SubFactoryList(SubFactory):

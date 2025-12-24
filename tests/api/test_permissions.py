@@ -6,7 +6,7 @@ NOTE: These tests are being migrated from Flask to FastAPI.
 import pytest
 from httpx import Response
 
-from megaqc.user.models import User
+from ultraqc.user.models import User
 from tests.factories import UserFactory
 
 from .utils import (

@@ -13,9 +13,9 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from megaqc.app import create_app
-from megaqc.database import Base, get_async_session
-from megaqc.settings import TestConfig
+from ultraqc.app import create_app
+from ultraqc.database import Base, get_async_session
+from ultraqc.settings import TestConfig
 
 from .factories import UserFactory
 

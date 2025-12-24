@@ -2,30 +2,30 @@ Production
 =============
 
 This section explains how to set up a production environment without
-the usage of container technologies. If you want to run MegaQC in a
+the usage of container technologies. If you want to run UltraQC in a
 containerized environment please refer to :ref:`docker_installation`.
 
-1. Install the MegaQC package
+1. Install the UltraQC package
 -----------------------------
 
-MegaQC is available on both the Python Package Index (PyPI).
-We are planning to add MegaQC to Conda soon.
+UltraQC is available on both the Python Package Index (PyPI).
+We are planning to add UltraQC to Conda soon.
 To install using PyPI, run the following command:
 
 .. code:: bash
 
-   pip install megaqc[prod]
+   pip install ultraqc[prod]
 
 2. Export environment variables
 -------------------------------
 
-By default, MegaQC runs in development mode with a sqlite flat file
+By default, UltraQC runs in development mode with a sqlite flat file
 database (this is to make it as simple as possible to get up and running
-for a quick test / demo). To tell MegaQC to use a production server, you
+for a quick test / demo). To tell UltraQC to use a production server, you
 need to set the ``MEGAQC_PRODUCTION`` environment variable to true
 (``export MEGAQC_PRODUCTION=1``).
 
-If you are running MegaQC behind a custom domain name (recommended, it’s
+If you are running UltraQC behind a custom domain name (recommended, it’s
 nicer than just having a difficult to remember IP address), then you
 need to set ``SERVER_NAME`` to the URL of the website.
 
@@ -34,16 +34,16 @@ Add the following lines to your ``.bashrc`` file:
 .. code:: bash
 
    export MEGAQC_PRODUCTION=1
-   export SERVER_NAME='http://megaqc.yourdomain.com'
+   export SERVER_NAME='http://ultraqc.yourdomain.com'
 
 3. Set up the database
 ----------------------
 
-MegaQC uses the Flask SQLAlchemy plugin, meaning that it can be used
+UltraQC uses the Flask SQLAlchemy plugin, meaning that it can be used
 with any SQL database (PostgreSQL, MySQL, SQLite and others).
 
-MegaQC has been developed with PostgreSQL, see below. For instructions.
-If you use MegaQC with any other database tools and could contribute to
+UltraQC has been developed with PostgreSQL, see below. For instructions.
+If you use UltraQC with any other database tools and could contribute to
 the documentation, that would be great!
 
 3.1 Using a PostgreSQL database
@@ -58,37 +58,37 @@ Then, install the Python package that handles requests:
 
    pip install psycopg2
 
-MegaQC can assess whether the database to use is ``postgresql``. If it
-is, it will try to connect as ``megaqc_user`` to the database ``megaqc``
-on ``localhost:5432``. On failure, MegaQC will attempt to create the
+UltraQC can assess whether the database to use is ``postgresql``. If it
+is, it will try to connect as ``ultraqc_user`` to the database ``ultraqc``
+on ``localhost:5432``. On failure, UltraQC will attempt to create the
 user and the database, and will then export the schema.
 
 In order to make this happen, run :
 
 .. code:: bash
 
-   megaqc initdb
+   ultraqc initdb
 
 3.2 Using a MySQL database
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Although PostgreSQL is highly recommended, MegaQC should work with other
+Although PostgreSQL is highly recommended, UltraQC should work with other
 SQL database back ends, such as MySQL.
 
    Please note that MySQL support is currently untested and unsupported.
-   If you use MegaQC with MySQL we’d love to hear about your experiences!
+   If you use UltraQC with MySQL we’d love to hear about your experiences!
 
 First, install MySQL:
 https://dev.mysql.com/doc/refman/5.7/en/installing.html
 
 Then install the `Python MySQL connector`_ (alternatively with the `PyPI package`_).
 
-Now, create a custom MegaQC configuration file somewhere and set the
+Now, create a custom UltraQC configuration file somewhere and set the
 environment variable ``MEGAQC_CONFIG`` to point to it. For example, in ``~/.bashrc``:
 
 .. code:: bash
 
-   export MEGAQC_CONFIG="/path/to/megaqc_config.yaml"
+   export MEGAQC_CONFIG="/path/to/ultraqc_config.yaml"
 
 Then in this file, set the following configuration key pair:
 
@@ -109,7 +109,7 @@ Apache
 primary web server, but it’s not recommended.*
 
 **Note:**\ *This is an example configuration that will map all http
-requests to the current server to MegaQC. It will also not filter
+requests to the current server to UltraQC. It will also not filter
 anything. Please consider your server security!*
 
 Update your apache configuration
@@ -151,14 +151,14 @@ For more details please refer to :ref:`docker_compose_stack`.
 
 .. code:: bash
 
-   gunicorn --log-file megaqc.log --timeout 300 megaqc.wsgi:app
+   gunicorn --log-file ultraqc.log --timeout 300 ultraqc.wsgi:app
 
 **Note:**\ *We recommend using a long timeout as the data upload from
 MultiQC can take several minutes for large reports*
 
-At this point, MegaQC should be running on the default gunicorn port (``8000``)
+At this point, UltraQC should be running on the default gunicorn port (``8000``)
 
-You should now have a fully functional MegaQC server running! 🎉
+You should now have a fully functional UltraQC server running! 🎉
 
 Troubleshooting
 ---------------
@@ -169,5 +169,5 @@ If you run an older OS, ensure that the package is installed.
 
 .. _Python MySQL connector: https://dev.mysql.com/downloads/connector/python/2.1.html
 .. _PyPI package: https://pypi.python.org/pypi/mysql-connector-python/2.0.4
-.. _create an issue: https://github.com/MultiQC/MegaQC/issues/new
-.. _deployment_folder: https://github.com/MultiQC/MegaQC/blob/main/deployment
+.. _create an issue: https://github.com/MultiQC/UltraQC/issues/new
+.. _deployment_folder: https://github.com/MultiQC/UltraQC/blob/main/deployment

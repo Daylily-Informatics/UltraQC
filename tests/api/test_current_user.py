@@ -5,7 +5,7 @@ NOTE: These tests are being migrated from Flask to FastAPI.
 """
 import pytest
 
-from megaqc.model import models
+from ultraqc.model import models
 from tests import factories
 
 

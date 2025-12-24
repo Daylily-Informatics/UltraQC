@@ -3,7 +3,7 @@ Usage
 =====
 
 In the following sections general details regarding the usage
-and administation of MegaQC are provided.
+and administation of UltraQC are provided.
 
 .. _cli_doc:
 .. include:: ../../cli.rst

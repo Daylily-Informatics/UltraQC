@@ -6,7 +6,7 @@ import datetime as dt
 
 import pytest
 
-from megaqc.user.models import Role, User
+from ultraqc.user.models import Role, User
 
 from .factories import UserFactory
 

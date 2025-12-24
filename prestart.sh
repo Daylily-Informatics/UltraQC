@@ -5,9 +5,9 @@
 sleep 10
 
 # Create the DB, ignoring errors, such as if the database already exists
-megaqc initdb || true
+ultraqc initdb || true
 
 # Run migrations
-cd megaqc
+cd ultraqc
 export FLASK_APP=wsgi.py
 flask db upgrade

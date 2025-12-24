@@ -3,8 +3,8 @@ Tests for filter functionality.
 """
 import pytest
 
-from megaqc.model import models
-from megaqc.rest_api import schemas
+from ultraqc.model import models
+from ultraqc.rest_api import schemas
 from tests import factories
 
 

@@ -1,35 +1,35 @@
 Docker
 ======
 
-MegaQC offers two ways of getting a containerized setup running:
+UltraQC offers two ways of getting a containerized setup running:
 
-1. A single Docker container containing MegaQC with a Gunicorn WSGI HTTP server
-2. A Docker Compose stack containing the MegaQC container, a Postgres container and a NGINX container
+1. A single Docker container containing UltraQC with a Gunicorn WSGI HTTP server
+2. A Docker Compose stack containing the UltraQC container, a Postgres container and a NGINX container
 
-.. _megaqc_docker_container:
+.. _ultraqc_docker_container:
 
-The MegaQC Docker container
+The UltraQC Docker container
 --------------------------------
 
 Overview
 ~~~~~~~~~~
 
-The MegaQC container is based on the `Node container <https://hub.docker.com/_/node>`_
+The UltraQC container is based on the `Node container <https://hub.docker.com/_/node>`_
 to compile all Javascript scripts and the `Gunicorn Flask container <https://hub.docker.com/r/tiangolo/meinheld-gunicorn-flask/dockerfile>`_
-providing Gunicorn, Flask and MegaQC preconfigured for production deployments.
+providing Gunicorn, Flask and UltraQC preconfigured for production deployments.
 The `Gunicorn Flask <https://hub.docker.com/r/tiangolo/meinheld-gunicorn-flask/dockerfile>`_ container
 is also the one spinning up the final server.
 
 Pulling the docker image from dockerhub
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To run MegaQC with docker, simply use the following command:
+To run UltraQC with docker, simply use the following command:
 
 .. code:: bash
 
-   docker run -p 80:80 multiqc/megaqc
+   docker run -p 80:80 multiqc/ultraqc
 
-This will pull the latest image from `dockerhub`_ and run MegaQC on port 80.
+This will pull the latest image from `dockerhub`_ and run UltraQC on port 80.
 
 Note that you will need to publish the port in order to access it from
 the host, or other machines. For more information, read https://docs.docker.com/engine/reference/run/ .
@@ -38,17 +38,17 @@ Building your own docker image
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If you prefer, you can build your own docker image if you have pulled the
-MegaQC code from GitHub. Simply cd to the MegaQC root directory and run
+UltraQC code from GitHub. Simply cd to the UltraQC root directory and run
 
 .. code:: bash
 
-   docker build . -t multiqc/megaqc
+   docker build . -t multiqc/ultraqc
 
-You can then run MegaQC as described above:
+You can then run UltraQC as described above:
 
 .. code:: bash
 
-   docker run -p 80:80 multiqc/megaqc
+   docker run -p 80:80 multiqc/ultraqc
 
 Configuration
 ~~~~~~~~~~~~~~~
@@ -62,42 +62,42 @@ host and port passed to gunicorn, let alone custom Gunicorn configuration files.
 Environment variables
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-By default, the MegaQC related environment variables are set to:
+By default, the UltraQC related environment variables are set to:
 
 .. code-block::
 
    MEGAQC_PRODUCTION=1
    MEGAQC_SECRET="SuperSecretValueYouShouldReallyChange"
    MEGAQC_CONFIG=""
-   APP_MODULE=megaqc.wsgi:app
+   APP_MODULE=ultraqc.wsgi:app
    DB_HOST="127.0.0.1"
    DB_PORT="5432"
-   DB_NAME="megaqc"
-   DB_USER="megaqc"
-   DB_PASS="megaqcpswd"
+   DB_NAME="ultraqc"
+   DB_USER="ultraqc"
+   DB_PASS="ultraqcpswd"
 
-To run MegaQC with custom environment variables use the ``-e key=value`` run options.
+To run UltraQC with custom environment variables use the ``-e key=value`` run options.
 For more information, please read
 `Docker - setting environment variables <https://docs.docker.com/engine/reference/commandline/run/#set-environment-variables--e---env---env-file>`_.
-Running MegaQC for example with a custom database password works as follows:
+Running UltraQC for example with a custom database password works as follows:
 
 .. code-block:: bash
 
-   docker run -e DB_PASS=someotherpassword multiqc/megaqc
+   docker run -e DB_PASS=someotherpassword multiqc/ultraqc
 
 Furthermore, be aware that the default latest tag will typically be a development version
 and may not be very stable. You can specify a tagged version to run a release instead:
 
 .. code:: bash
 
-   docker run -p 80:80 multiqc/megaqc:v0.2.0
+   docker run -p 80:80 multiqc/ultraqc:v0.2.0
 
 Also note that docker will use a local version of the image if it
-exists. To pull the latest version of MegaQC use the following command:
+exists. To pull the latest version of UltraQC use the following command:
 
 .. code:: bash
 
-   docker pull multiqc/megaqc
+   docker pull multiqc/ultraqc
 
 Using persistent data
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -117,13 +117,13 @@ To create or re-use a docker volume named ``pg_data``:
 
 .. code:: bash
 
-   docker run -p 80:80 -v pg_data:/usr/local/lib/postgresql multiqc/megaqc
+   docker run -p 80:80 -v pg_data:/usr/local/lib/postgresql multiqc/ultraqc
 
 The same can be done for a log directory volume called ``pg_logs``
 
 .. code:: bash
 
-   docker run -p 80:80 -v pg_data:/usr/local/lib/postgresql -v pg_logs:/var/log/postgresql multiqc/megaqc
+   docker run -p 80:80 -v pg_data:/usr/local/lib/postgresql -v pg_logs:/var/log/postgresql multiqc/ultraqc
 
 If you did not specify a volume name, docker will have given it a long
 hex string as a unique name. If you do not use volumes frequently, you
@@ -169,36 +169,36 @@ Example output for the above, nicely formatted:
    }
    ]
 
-Running MegaQC with a local Postgres database
+Running UltraQC with a local Postgres database
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 To access a Postgres database running on a localhost you need to use
 the host's networking. For more information, read
 https://docs.docker.com/network/host/ .
 
-An example command to run MegaQC with a Postgres database which is accessible
+An example command to run UltraQC with a Postgres database which is accessible
 on ``localhost:5432``, looks as follows:
 
 .. code:: bash
 
-   docker run --network="host" -p 5432 multiqc/megaqc
+   docker run --network="host" -p 5432 multiqc/ultraqc
 
 Note that by default ``localhost=127.0.0.1``.
 
 .. _docker_compose_stack:
 
-The MegaQC Docker Compose stack
+The UltraQC Docker Compose stack
 ------------------------------------
 
-Since a fully working and performant MegaQC instance depends on a SQL database
-and a reverse proxy, MegaQC offers a docker-compose stack, which sets up three
+Since a fully working and performant UltraQC instance depends on a SQL database
+and a reverse proxy, UltraQC offers a docker-compose stack, which sets up three
 containers for a zero configuration setup.
 
 Overview
 ~~~~~~~~~~~
 
 The `docker-compose`_ configuration can be accessed in the `deployment folder`_.
-The docker-compose configuration provides the :ref:`megaqc_docker_container`,
+The docker-compose configuration provides the :ref:`ultraqc_docker_container`,
 a `postgres container <https://hub.docker.com/_/postgres>`_ for the SQL database
 and a `nginx container <https://hub.docker.com/_/nginx>`_ for the reverse proxy setup.
 
@@ -206,14 +206,14 @@ Usage
 ~~~~~~~~
 
 Inside the `deployment folder`_ the `docker-compose`_ configuration
-together with the associated `.env <https://github.com/MultiQC/MegaQC/blob/main/deployment/.env>`_ file
-are found. To spin up all containers simply run from inside the `deployment folder <https://github.com/MultiQC/MegaQC/blob/main/deployment>`_:
+together with the associated `.env <https://github.com/MultiQC/UltraQC/blob/main/deployment/.env>`_ file
+are found. To spin up all containers simply run from inside the `deployment folder <https://github.com/MultiQC/UltraQC/blob/main/deployment>`_:
 
 .. code:: bash
 
    docker-compose up
 
-All containers should now spin up and the MegaQC server should be accessible on ``0.0.0.0:80``.
+All containers should now spin up and the UltraQC server should be accessible on ``0.0.0.0:80``.
 Alternatively, you can spin up the containers in the background:
 
 .. code:: bash
@@ -228,9 +228,9 @@ Configuration
 Environment variables
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The default environment variables for MegaQC used when starting the :ref:`megaqc_docker_container`
-are defined inside the `.env <https://github.com/MultiQC/MegaQC/blob/main/deployment/.env>`_ file.
-Simply edit the file and the new environment variables will be passed to the :ref:`megaqc_docker_container`.
+The default environment variables for UltraQC used when starting the :ref:`ultraqc_docker_container`
+are defined inside the `.env <https://github.com/MultiQC/UltraQC/blob/main/deployment/.env>`_ file.
+Simply edit the file and the new environment variables will be passed to the :ref:`ultraqc_docker_container`.
 
 Further runtime arguments
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -239,15 +239,15 @@ Further runtime arguments can be added to a
 `command section <https://docs.docker.com/compose/compose-file/#command>`_
 inside the `docker-compose`_ configuration file.
 
-.. _deployment_folder: https://github.com/MultiQC/MegaQC/blob/main/deployment
-.. _docker-compose: https://github.com/MultiQC/MegaQC/blob/main/deployment/docker-compose.yml
-.. _dockerhub: https://hub.docker.com/r/multiqc/megaqc/
+.. _deployment_folder: https://github.com/MultiQC/UltraQC/blob/main/deployment
+.. _docker-compose: https://github.com/MultiQC/UltraQC/blob/main/deployment/docker-compose.yml
+.. _dockerhub: https://hub.docker.com/r/multiqc/ultraqc/
 
 HTTPS
 ~~~~~
-By default, the MegaQC stack ships with a self-signed SSL certificate for testing purposes.
+By default, the UltraQC stack ships with a self-signed SSL certificate for testing purposes.
 For this reason we recommend that you use HTTP to access the stack.
-However, if you want to enable HTTPS, perhaps because you are making MegaQC available on the public internet, then it should be simple to install your own certificates.
+However, if you want to enable HTTPS, perhaps because you are making UltraQC available on the public internet, then it should be simple to install your own certificates.
 To do so, go to the ``deployment`` directory and edit the ``.env`` file.
 Then, edit these lines to the full filepath of the respective ``.crt`` and ``.key`` files:
 
@@ -256,4 +256,4 @@ Then, edit these lines to the full filepath of the respective ``.crt`` and ``.ke
     CRT_PATH=./nginx-selfsigned.crt
     KEY_PATH=./nginx-selfsigned.key
 
-After this, run the stack as described above, and then you should be able to access MegaQC on ``https://your_hostname``.
+After this, run the stack as described above, and then you should be able to access UltraQC on ``https://your_hostname``.

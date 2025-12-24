@@ -5,7 +5,7 @@ Functional tests using FastAPI TestClient.
 import pytest
 from sqlalchemy import select
 
-from megaqc.user.models import User
+from ultraqc.user.models import User
 
 from .factories import UserFactory
 

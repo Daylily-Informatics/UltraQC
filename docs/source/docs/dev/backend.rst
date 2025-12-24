@@ -7,7 +7,7 @@ structure of the project.
 Database
 --------
 
-MegaQC uses `SQLAlchemy`_ to handle database access, which means it can
+UltraQC uses `SQLAlchemy`_ to handle database access, which means it can
 integrate with any SQL database that it supports. For development this
 will likely be SQLite.
 
@@ -21,7 +21,7 @@ any models class) changes. To generate a migration:
 
 .. code:: bash
 
-   cd megaqc
+   cd ultraqc
    export FLASK_APP=wsgi.py
    flask db upgrade # Update to the latest migration
    flask db migrate
@@ -29,13 +29,13 @@ any models class) changes. To generate a migration:
 API
 ---
 
-MegaQC actually has two APIs. The first, older API is accessed at
-``/api``, and the code for this API is located in `megaqc/api`_.
+UltraQC actually has two APIs. The first, older API is accessed at
+``/api``, and the code for this API is located in `ultraqc/api`_.
 This API is implemented using regular flask views.
 
 However, all future development should be done on the newer REST API.
 This is accessed at ``/rest_api/v1``, and the code for it is located in
-`megaqc/rest_api`_. This API is composed of views, located in
+`ultraqc/rest_api`_. This API is composed of views, located in
 ``views.py``. These view classes, which rely on `flapison`_, each
 define an SQLAlchemy model that defines how to access the data, and a
 Marshmallow schema, which defines how to serialize and deserialize the
@@ -61,16 +61,16 @@ be done inside `test_api.py`_, which tests all REST API endpoints.
 
 .. _flask: https://www.palletsprojects.com/p/flask/
 .. _SQLAlchemy: https://docs.sqlalchemy.org/
-.. _model/models.py: https://github.com/MultiQC/MegaQC/blob/main/megaqc/model/models.py
-.. _user/models.py: https://github.com/MultiQC/MegaQC/blob/main/megaqc/user/models.py
-.. _megaqc/api: https://github.com/MultiQC/MegaQC/tree/main/megaqc/api
-.. _megaqc/rest_api: https://github.com/MultiQC/MegaQC/tree/main/megaqc/rest_api
-.. _views.py: https://github.com/MultiQC/MegaQC/blob/main/megaqc/rest_api/views.py
+.. _model/models.py: https://github.com/MultiQC/UltraQC/blob/main/ultraqc/model/models.py
+.. _user/models.py: https://github.com/MultiQC/UltraQC/blob/main/ultraqc/user/models.py
+.. _ultraqc/api: https://github.com/MultiQC/UltraQC/tree/main/ultraqc/api
+.. _ultraqc/rest_api: https://github.com/MultiQC/UltraQC/tree/main/ultraqc/rest_api
+.. _views.py: https://github.com/MultiQC/UltraQC/blob/main/ultraqc/rest_api/views.py
 .. _flapison: https://github.com/TMiguelT/flapison
-.. _schemas.py: https://github.com/MultiQC/MegaQC/tree/main/megaqc/rest_api/schemas.py
-.. _public/views.py: https://github.com/MultiQC/MegaQC/tree/main/megaqc/public/views.py
-.. _user/views.py: https://github.com/MultiQC/MegaQC/tree/main/megaqc/user/views.py
+.. _schemas.py: https://github.com/MultiQC/UltraQC/tree/main/ultraqc/rest_api/schemas.py
+.. _public/views.py: https://github.com/MultiQC/UltraQC/tree/main/ultraqc/public/views.py
+.. _user/views.py: https://github.com/MultiQC/UltraQC/tree/main/ultraqc/user/views.py
 .. _Jinja2: https://jinja.palletsprojects.com/en/2.11.x/
 .. _frontend: ./frontend.md
-.. _python_tests: https://github.com/MultiQC/MegaQC/tree/main/tests
-.. _test_api.py: https://github.com/MultiQC/MegaQC/tree/main/megaqc/api/test_api.py
+.. _python_tests: https://github.com/MultiQC/UltraQC/tree/main/tests
+.. _test_api.py: https://github.com/MultiQC/UltraQC/tree/main/ultraqc/api/test_api.py

@@ -1,10 +1,10 @@
 [tool.poetry]
-name = "megaqc"
-version = "0.3.0"
-description = "Collect and visualise data across multiple MultiQC runs"
-authors = ["Phil Ewels"]
+name = "ultraqc"
+version = "1.0.0"
+description = "Modern web application to collect and visualise data across multiple MultiQC runs - powered by FastAPI"
+authors = ["Daylily Informatics"]
 license = "GPLv3"
-readme = "README.rst"
+readme = "README.md"
 keywords = [
         "bioinformatics",
         "biology",
@@ -12,14 +12,17 @@ keywords = [
         "NGS",
         "next generation sequencing",
         "quality control",
+        "fastapi",
+        "multiqc",
 ]
-homepage = "https://megaqc.info/"
-repository = "https://github.com/MultiQC/MegaQC"
-documentation = "https://megaqc.info/docs/index.html"
+homepage = "https://github.com/daylily-informatics/UltraQC"
+repository = "https://github.com/daylily-informatics/UltraQC"
+documentation = "https://github.com/daylily-informatics/UltraQC#readme"
 classifiers = [
         "Development Status :: 4 - Beta",
         "Environment :: Console",
         "Environment :: Web Environment",
+        "Framework :: FastAPI",
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
         "Natural Language :: English",
@@ -27,12 +30,16 @@ classifiers = [
         "Operating System :: POSIX",
         "Operating System :: Unix",
         "Programming Language :: Python",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
         "Programming Language :: JavaScript",
         "Topic :: Scientific/Engineering",
         "Topic :: Scientific/Engineering :: Bio-Informatics",
         "Topic :: Scientific/Engineering :: Visualization",
 ]
-packages = [{ include = "megaqc" }]
+packages = [{ include = "ultraqc" }]
 
 [tool.poetry.dependencies]
 python = "^3.9"
@@ -101,7 +108,7 @@ deploy = ["wheel"]
 prod = ["psycopg2", "asyncpg"]
 
 [tool.poetry.scripts]
-megaqc = "megaqc.cli:main"
+ultraqc = "ultraqc.cli:main"
 
 [build-system]
 requires = ["poetry-core"]

@@ -1,7 +1,7 @@
-MegaQC Commandline Interface
+UltraQC Commandline Interface
 ================================
 
-.. click:: megaqc.cli:cli
-   :prog: megaqc
+.. click:: ultraqc.cli:cli
+   :prog: ultraqc
    :nested: full
    

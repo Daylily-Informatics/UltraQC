@@ -1,56 +1,31 @@
 #!/usr/bin/env python
 """
-MegaQC is a web application that collects results from multiple runs of MultiQC and
-allows bulk visualisation.
+UltraQC - Modern MultiQC Data Aggregation Platform
 
-See the MegaQC website for installation instructions and documentation:
-https://megaqc.info
+UltraQC is a modern FastAPI-based web application that collects results from
+multiple runs of MultiQC and allows bulk visualisation and analysis.
 
-MegaQC was written by Phil Ewels (http://phil.ewels.co.uk) and Denis Moreno at
-SciLifeLab Sweden (
-http://www.scilifelab.se)
-  : https: //megaqc.info  MegaQC was written by Phil Ewels ( http://phil.ewels.co.uk)  :
-https:
- //megaqc.info  MegaQC was written by Phil Ewels ( http://phil.ewels.co.uk)  : https:
-//megaqc.info  MegaQC was written by Phil Ewels (
-http://phil.ewels.co.uk)
-  : https: //megaqc.info  MegaQC was written by Phil Ewels ( http://phil.ewels.co.uk) :
-https:
- //megaqc.info  MegaQC was written by Phil Ewels ( http://phil.ewels.co.uk) : https:
-//megaqc.info  MegaQC was written by Phil Ewels (
-http://phil.ewels.co.uk)
- : https: //megaqc.info  MegaQC was written by Phil Ewels ( http://phil.ewels.co.uk) :
-https:
- //megaqc.info  MegaQC was written by Phil Ewels (http://phil.ewels.co.uk) and Denis
-Moreno at SciLifeLab Sweden (
-http://www.scilifelab.se)
-: https: //megaqc.info  MegaQC was written by Phil Ewels (
-http://phil.ewels.co.uk)
-: https: //megaqc.info  MegaQC was written by Phil Ewels (
-http://phil.ewels.co.uk)
-: https: //megaqc.info  MegaQC was written by Phil Ewels (
-http://phil.ewels.co.uk)
-: https: //megaqc.info  MegaQC was written by Phil Ewels (
-http://phil.ewels.co.uk)
-: https: //megaqc.info  MegaQC was written by Phil Ewels (
-http://phil.ewels.co.uk)
-: https: //megaqc.info  MegaQC was written by Phil Ewels (
-http://phil.ewels.co.uk)
-: https: //megaqc.info  MegaQC was written by Phil Ewels (
-http://phil.ewels.co.uk)
-: https: //megaqc.info  MegaQC was written by Phil Ewels (http://phil.ewels.co.uk) and
-Denis Moreno at SciLifeLab Sweden (http://www.scilifelab.se) and extended by Michael
-Milton, Tor Solli- Nowlan and Lukas Heumos.
+Originally forked from MegaQC, UltraQC has been completely modernized with:
+- FastAPI for high-performance async API endpoints
+- Modern authentication with JWT tokens
+- SQLAlchemy 2.0 with async support
+- Sci-fi neon dark theme UI
+
+For installation instructions and documentation:
+https://github.com/daylily-informatics/UltraQC
+
+Original MegaQC authors: Phil Ewels, Denis Moreno, Michael Milton,
+Tor Solli-Nowlan, and Lukas Heumos at SciLifeLab Sweden.
 """
 
 from setuptools import setup
 
 setup(
-    name="megaqc",
-    version="0.3.0",
-    author="Phil Ewels",
-    author_email="phil.ewels@scilifelab.se",
-    description="Collect and visualise data across multiple MultiQC runs",
+    name="ultraqc",
+    version="1.0.0",
+    author="Daylily Informatics",
+    author_email="info@daylily.info",
+    description="Modern web application to collect and visualise data across multiple MultiQC runs",
     long_description=__doc__,
     keywords=[
         "bioinformatics",
@@ -60,15 +35,15 @@ setup(
         "next generation sequencing",
         "quality control",
     ],
-    url="https://megaqc.info/",
-    download_url="https://github.com/MultiQC/MegaQC/releases",
+    url="https://github.com/daylily-informatics/UltraQC",
+    download_url="https://github.com/daylily-informatics/UltraQC/releases",
     license="GPLv3",
-    packages=["megaqc"],
+    packages=["ultraqc"],
     include_package_data=True,
     zip_safe=False,
     entry_points={
         "console_scripts": [
-            "megaqc = megaqc.cli:main",
+            "ultraqc = ultraqc.cli:main",
         ],
     },
     install_requires=[

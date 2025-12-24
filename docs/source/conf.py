@@ -1,7 +1,7 @@
 import os
 import sys
 
-import megaqc
+import ultraqc
 
 basedir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, basedir)
@@ -9,13 +9,13 @@ sys.path.insert(0, basedir)
 
 # -- Project information -----------------------------------------------------
 
-project = "MegaQC"
-copyright = "2020, MegaQC Team"
-author = "MegaQC Team"
+project = "UltraQC"
+copyright = "2020, UltraQC Team"
+author = "UltraQC Team"
 
-version = megaqc.version
+version = ultraqc.version
 
-release = megaqc.version
+release = ultraqc.version
 
 
 # -- General configuration ---------------------------------------------------
@@ -59,7 +59,7 @@ html_theme = "sphinx_rtd_theme"
 
 html_static_path = ["_static"]
 html_css_files = [
-    "megaqc_style.css",
+    "ultraqc_style.css",
 ]
 
 html_context = {
@@ -68,7 +68,7 @@ html_context = {
     # Set the following variables to generate the resulting github URL for each page.
     # Format Template: https://{{ github_host|default("github.com") }}/{{ github_user }}/{{ github_repo }}/blob/{{ github_version }}{{ conf_py_path }}{{ pagename }}{{ suffix }}
     "github_user": "MultiQC",
-    "github_repo": "MegaQC",
+    "github_repo": "UltraQC",
     "github_version": "main/docs",
     "conf_py_path": "/source/",
 }
@@ -85,17 +85,17 @@ def linkcode_resolve(domain, info):
         import os
 
         fn = inspect.getsourcefile(obj)
-        fn = os.path.relpath(fn, start=os.path.dirname(megaqc.__file__))
+        fn = os.path.relpath(fn, start=os.path.dirname(ultraqc.__file__))
         source, lineno = inspect.getsourcelines(obj)
         return fn, lineno, lineno + len(source) - 1
 
     if domain != "py" or not info["module"]:
         return None
     try:
-        filename = "megaqc/%s#L%d-L%d" % find_source()
+        filename = "ultraqc/%s#L%d-L%d" % find_source()
     except Exception:
         filename = info["module"].replace(".", "/") + ".py"
     tag = "main"
     # TODO use this after the first release: tag = 'main' if 'dev' in release else ('v' + release)
 
-    return "https://github.com/MultiQC/MegaQC/blob/%s/%s" % (tag, filename)
+    return "https://github.com/MultiQC/UltraQC/blob/%s/%s" % (tag, filename)

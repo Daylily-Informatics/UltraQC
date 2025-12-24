@@ -45,7 +45,7 @@ module.exports = {
     extensions: ["*", ".js", ".jsx"],
   },
   output: {
-    path: __dirname + "/megaqc/static/js",
+    path: __dirname + "/ultraqc/static/js",
     publicPath: "/",
     filename: "[name].js",
   },

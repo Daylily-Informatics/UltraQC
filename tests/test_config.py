@@ -4,8 +4,8 @@ Test configs.
 """
 import pytest
 
-from megaqc.app import create_app
-from megaqc.settings import DevConfig, ProdConfig
+from ultraqc.app import create_app
+from ultraqc.settings import DevConfig, ProdConfig
 
 
 @pytest.mark.noautofixt

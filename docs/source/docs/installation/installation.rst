@@ -2,11 +2,11 @@
 Installation
 ===============
 
-MegaQC has been written in Python using the `Flask`_ web framework.
-MegaQC is designed to be very simple to get up and running for basic
+UltraQC has been written in Python using the `Flask`_ web framework.
+UltraQC is designed to be very simple to get up and running for basic
 testing and evaluation, yet super easy to configure for a high
 performance production installation. The various ways of getting a runnable 
-MegaQC instance are explained in the following sections.
+UltraQC instance are explained in the following sections.
 
 .. include:: installation_prod.rst
 .. _docker_installation:
