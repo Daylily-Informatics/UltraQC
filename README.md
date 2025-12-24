@@ -38,7 +38,7 @@ UltraQC is a modern, high-performance web application that collects and visualiz
 ### Quick Install (pip)
 
 ```bash
-pip install ultraqc
+#NOT YET pip install ultraqc
 ```
 
 ### Development Install
