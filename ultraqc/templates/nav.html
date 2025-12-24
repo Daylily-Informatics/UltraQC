@@ -1,0 +1,71 @@
+
+<nav class="navbar navbar-expand-md navbar-light">
+  <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#ultraqc_navbar" aria-controls="ultraqc_navbar" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+  <a class="navbar-brand" href="{{ url_for('public.home') }}">
+    <img id="navbar-ultraqc-logo" src="{{ url_for('static', filename='img/favicon.svg') }}" width="30" height="30" class="d-inline-block align-top" title="UltraQC">
+    UltraQC
+  </a>
+
+  <div class="collapse navbar-collapse" id="ultraqc_navbar">
+
+    <ul class="navbar-nav mr-auto">
+      <li class="nav-item {% if request.path == "/" %}active{% endif %}">
+        <a class="nav-link" href="{{ url_for('public.home') }}">Home{%- if request.path == "/home" %} <span class="sr-only">(current)</span>{% endif %}</a>
+      </li>
+      <li class="nav-item {% if request.path == "/about" %}active{% endif %}">
+        <a class="nav-link" href="{{ url_for('public.about') }}">About{%- if request.path == "/home" %} <span class="sr-only">(current)</span>{% endif %}</a>
+      </li>
+      <li class="nav-item {% if request.path == "/about" %}active{% endif %}">
+        <a class="nav-link" href="https://gitter.im/MultiQC/UltraQC" target="_blank" title="Chat on Gitter">Get Help</a>
+      </li>
+    </ul>
+
+    <ul class="navbar-nav my-2 my-lg-0">
+    {% if current_user and current_user.is_authenticated %}
+      <li class="nav-item">
+        <a href="{{ url_for('public.choose_plot_type') }}" class="btn btn-outline-secondary mr-2">New Plot</a>
+      </li>
+      <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" href="#" id="navbarUserDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" role="button">
+          Welcome {{ current_user.first_name }}
+        </a>
+        <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarUserDropdown">
+          <h6 class="dropdown-header">Your Details</h6>
+          <a class="dropdown-item" href="{{ url_for('user.profile') }}">Your Profile</a>
+          <a class="dropdown-item" href="{{ url_for('user.multiqc_config') }}">MultiQC Configuration</a>
+          <div class="dropdown-divider"></div>
+          <h6 class="dropdown-header">Plots and Dashboards</h6>
+          <a class="dropdown-item" href="{{ url_for('public.list_dashboard') }}">List Dashboards</a>
+          <a class="dropdown-item" href="{{ url_for('public.create_dashboard') }}">Create Dashboard</a>
+          <a class="dropdown-item" href="{{ url_for('public.plot_favourites') }}">Favourite Plots</a>
+          <div class="dropdown-divider"></div>
+          <h6 class="dropdown-header">Uploads and Filters</h6>
+          <a class="dropdown-item" href="{{ url_for('public.queued_uploads') }}">Pending Uploads</a>
+          <a class="dropdown-item" href="{{ url_for('public.edit_filters') }}">Edit Filters</a>
+          <a class="dropdown-item" href="{{ url_for('public.edit_reports') }}">Edit Reports</a>
+          {% if current_user.is_admin %}
+          <div class="dropdown-divider"></div>
+          <h6 class="dropdown-header">Administration Pages</h6>
+          <a class="dropdown-item" href="{{ url_for('user.manage_users') }}">Manage Users</a>
+          <a class="dropdown-item" href="{{ url_for('public.admin') }}">Data Admin</a>
+          {% endif %}
+          <div class="dropdown-divider"></div>
+          <a class="dropdown-item text-danger" href="{{ url_for('public.logout') }}">Log Out</a>
+        </div>
+      </li>
+    {% else %}
+      <li class="nav-item">
+        <a class="nav-link" href="{{ url_for('public.login') }}">Log In</a>
+      </li>
+      <li>
+        <a class="nav-link" href="{{ url_for('public.register') }}">Register</a>
+      </li>
+    {% endif %}
+    </ul>
+
+  </div>
+
+</nav>

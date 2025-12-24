@@ -1,0 +1,444 @@
+
+{% extends "layout.html" %}
+{% block content %}
+
+<h1 class="mt-4 mb-4">
+    {% if dashboard_id %}Edit{% else %}Create{% endif %} Dashboard
+    <i class="loading-spinner fa fa-spinner fa-pulse fa-3x fa-fw" style="display:none;"></i>
+    <span class="loading-spinner" style="display:none;">Loading...</span>
+</h1>
+
+<div class="form-group row">
+    <label for="dashboard_title" class="col-sm-3 col-lg-2 col-form-label">Dashboard Title</label>
+    <div class="col-sm-5 col-lg-6">
+        <input type="text" class="form-control" id="dashboard_title" placeholder="Name of dashboard">
+        <div id="dashboard_title_feedback" class="invalid-feedback">Please enter a title for the dashboard.</div>
+    </div>
+    <div class="col-sm-4">
+        <button id="save-plot-btn" class="btn btn-primary btn-block">Save &amp; View Dashboard</button>
+    </div>
+</div>
+<div class="row">
+    <div class="col-sm-4 col-lg-2 mb-3">
+        <button class="btn btn-outline-info btn-lg btn-block" data-toggle="modal" data-target="#dashboard-add-plot-modal">
+            <i class="fa fa-line-chart" aria-hidden="true"></i><br>
+            Add Plot
+        </button>
+    </div>
+    <div class="col-sm-4 col-lg-2 mb-3">
+        <button class="btn btn-outline-info btn-lg btn-block" data-toggle="modal" data-target="#dashboard-add-heading-modal">
+            <i class="fa fa-header" aria-hidden="true"></i><br>
+            Add Heading
+        </button>
+    </div>
+    <div class="col-sm-4 col-lg-2 mb-3">
+        <button class="btn btn-outline-info btn-lg btn-block disabled">
+            <i class="fa fa-picture-o" aria-hidden="true"></i><br>
+            Add Image
+        </button>
+    </div>
+    <div class="col-sm-4 col-lg-2 mb-3">
+        <button class="btn btn-outline-info btn-lg btn-block disabled">
+            <i class="fa fa-list-ul" aria-hidden="true"></i><br>
+            Add Markdown
+        </button>
+    </div>
+    <div class="col-sm-4 col-lg-2 mb-3">
+        <button class="btn btn-outline-info btn-lg btn-block" data-toggle="modal" data-target="#dashboard-add-html-modal">
+            <i class="fa fa-code" aria-hidden="true"></i><br>
+            Custom HTML
+        </button>
+    </div>
+    <div class="col-sm-4 col-lg-2 mb-3">
+        <div id="delete-area" class="alert-danger">
+            <i class="fa fa-trash" aria-hidden="true"></i><br>
+            Drag to delete
+        </div>
+    </div>
+</div>
+
+<div class="card mt-3" id="dashboard">
+    <h4 class="card-header">{% if dashboard_id %}Edit{% else %}New{% endif %}  Dashboard</h4>
+    <div class="card-body">
+        <div class="grid-stack"></div>
+    </div>
+</div>
+
+
+<!-- Add Plot Modal -->
+<div class="modal fade" id="dashboard-add-plot-modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title show-create">Add plot to dashboard</h5>
+                <h5 class="modal-title show-edit" style="display:none;">Edit dashboard plot</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-info">
+                    <i class="fa fa-info-circle ml-2 mr-1"></i>
+                    Click a table row to add that plot to the dashboard.
+                </p>
+                <table class="table table-striped table-hover" id="plot_favourites_table">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Description</th>
+                            <th>Plot Type</th>
+                            <th>Created</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if favourite_plots|length == 0 %}
+                        <tr>
+                            <td colspan="4" class="text-muted text-center">
+                                No favourites found..
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% for fav in favourite_plots %}
+                            <tr id="plot-favourite-{{ fav['plot_favourite_id'] }}">
+                                <td>{{ fav['title'] }}</td>
+                                <td>{{ fav['description'] | safe_markdown }}</td>
+                                <td>{{ fav['plot_type'] | replace('_', ' ') | title }}</td>
+                                <td>{{ fav['created_at'].strftime('%Y-%m-%d %H:%M') }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Heading Modal -->
+<div class="modal fade" id="dashboard-add-heading-modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title show-create">Add heading to dashboard</h5>
+                <h5 class="modal-title show-edit" style="display:none;">Edit heading in dashboard</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="form-group row">
+                        <label for="dashboard_title" class="col-sm-6 col-lg-3 col-form-label">Heading Style:</label>
+                        <div class="col-sm-6 col-lg-3">
+                            <select class="form-control" id="dashboard-add-heading-class">
+                                <option value="display-1">Display 1</option>
+                                <option value="display-2">Display 2</option>
+                                <option value="display-3">Display 3</option>
+                                <option value="display-4">Display 4</option>
+                                <option value="h1">Heading 1</option>
+                                <option value="h2">Heading 2</option>
+                                <option value="h3">Heading 3</option>
+                                <option value="h4">Heading 4</option>
+                                <option value="h5">Heading 5</option>
+                                <option value="h6">Heading 6</option>
+                            </select>
+                        </div>
+                    </div>
+                    <input class="display-1" id="dashboard-add-heading" placeholder="Type Here" type="text">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary show-create">Add to dashboard</button>
+                    <button type="submit" class="btn btn-primary show-edit" style="display:none;">Edit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Add Custom HTML Modal -->
+<div class="modal fade" id="dashboard-add-html-modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <form>
+                <div class="modal-header">
+                    <h5 class="modal-title show-create">Add custom HTML to dashboard</h5>
+                    <h5 class="modal-title show-edit" style="display:none;">Edit custom HTML in dashboard</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <textarea class="form-control monospace" rows="15" id="dashboard-add-html"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary show-create">Add to dashboard</button>
+                    <button type="submit" class="btn btn-primary show-edit" style="display:none;">Edit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+{% block css %}
+<link rel="stylesheet" href="/static/css/gridstack.min.css">
+{% endblock %}
+{% block js %}
+<script type="text/javascript" src="/static/js/libs/lodash.min.js"></script>
+<script type="text/javascript" src="/static/js/libs/jquery-ui.min.js"></script>
+<script type="text/javascript" src="/static/js/libs/gridstack.min.js"></script>
+<script type="text/javascript" src="/static/js/libs/gridstack.jQueryUI.min.js"></script>
+<script type="text/javascript">
+$(function () {
+    // Initialise grid-stack
+    $('.grid-stack').gridstack({
+        cellHeight: 40,
+        verticalMargin: 10,
+        alwaysShowResizeHandle: true,
+        resizable: {
+            handles: 'se, sw'
+        }
+    });
+
+    // Add edit buttons to grid items when created
+    $('.grid-stack').on('added', function(event, items) {
+        for (var i = 0; i < items.length; i++) {
+            items[i]['el'].append(
+                '<button class="btn btn-sm btn-primary edit-btn">'+
+                    '<i class="fa fa-pencil mr-1" aria-hidden="true"></i> Edit'+
+                '</button>'
+            );
+        }
+    });
+
+    // Reset heading modal when adding new plot
+    $('button[data-target="#dashboard-add-plot-modal"]').click(function(){
+        $('#plot_favourites_table').data('edit-target', '');
+        $('#dashboard-add-plot-modal .show-create').hide();
+        $('#dashboard-add-plot-modal .show-edit').show();
+    });
+
+    // Add a new plot
+    $('#plot_favourites_table tbody tr').click(function(){
+
+        var dash_grid = $('.grid-stack').data('gridstack');
+        var plot_id = $(this).attr('id').replace('plot-favourite-', '');
+        var ptarget = $('#plot_favourites_table').data('edit-target');
+        if(ptarget){ el_id = ptarget; }
+        else { el_id = 'dashboard-plot-'+Math.random().toString(36).substring(7); }
+        var new_item = $('<div class="grid-stack-item-content loading" id="'+el_id+'">'+
+                '<div class="plotly-plot">'+
+                    '<span class="grid-stack-loading">'+
+                        '<i class="loading-spinner fa fa-spinner fa-pulse fa-3x fa-fw mr-1"></i>'+
+                        '<span class="loading-spinner">Loading...</span>'+
+                    '</span>'+
+                '</div>'+
+            '</div>');
+
+        // editing an exiting item
+        if(ptarget){
+            $('#'+el_id).replaceWith(new_item);
+        // Create a new item
+        } else {
+            dash_grid.addWidget(
+                $('<div class="grid-stack-item" data-type="plot" data-plot_id="'+plot_id+'" />').append(new_item),
+                0, 0, 6, 3
+            );
+        }
+
+        // Hide the modal
+        $('#dashboard-add-plot-modal').modal('hide');
+
+        // Get the plot HTML into a new div
+        window.ajax_update = $.ajax({
+            url: '/api/get_favourite_plot',
+            type: 'post',
+            data: JSON.stringify({'favourite_id': plot_id }),
+            headers : { access_token:window.token },
+            dataType: 'json',
+            contentType: 'application/json; charset=UTF-8',
+            success: function(data){
+                if (data['success']){
+                    $('#'+el_id+' .plotly-plot').html(data['plot_html']);
+                    $('#'+el_id+' .plotly-plot').closest('.grid-stack-item-content').removeClass('loading');
+                }
+                // AJAX data['success'] was false
+                else {
+                    console.log(data);
+                    toastr.error('There was an error whilst generating this plot.');
+                }
+            },
+            error: function(data){
+                toastr.error('There was an error retrieving this plot.');
+            }
+        });
+    });
+
+    // Edit Plot
+    $('#dashboard').on('click', '.grid-stack-item[data-type="plot"] .edit-btn', function(){
+        var el_id = $(this).siblings('.grid-stack-item-content').attr('id');
+        $('#dashboard-add-plot-modal').modal('show');
+        $('#plot_favourites_table').data('edit-target', el_id);
+        $('#dashboard-add-plot-modal .show-create').hide();
+        $('#dashboard-add-plot-modal .show-edit').show();
+    });
+
+    // Update plotly plots when resized
+    $('.grid-stack').on('gsresizestop', function(event, elem) {
+        // Cheat: tell the browser that the whole window has been resized
+        window.dispatchEvent(new Event('resize'));
+    });
+
+    // Update heading style dropdown
+    $('#dashboard-add-heading-class').change(function(){
+        $('#dashboard-add-heading').removeClass().addClass($(this).val());
+    });
+
+    // Reset heading modal when adding new heading
+    $('button[data-target="#dashboard-add-heading-modal"]').click(function(){
+        $('#dashboard-add-heading-modal form').data('edit-target', '');
+        $('#dashboard-add-heading-modal .show-create').show();
+        $('#dashboard-add-heading-modal .show-edit').hide();
+        $('#dashboard-add-heading-class').val('display-1');
+        $('#dashboard-add-heading').val('').removeClass().addClass('display-1');
+    });
+
+    // Add Heading to dashboard
+    $('#dashboard-add-heading-modal form').submit(function(e){
+        e.preventDefault();
+        var edit_target = $(this).data('edit-target');
+        var hclass = $('#dashboard-add-heading-class').val();
+        var htag = hclass.replace('display-','h');
+        if(edit_target && edit_target.length > 0){
+            $(edit_target).html('<'+htag+' class="'+hclass+'">'+$('#dashboard-add-heading').val()+'</'+htag+'>');
+        } else {
+            var dash_grid = $('.grid-stack').data('gridstack');
+            var el_id = 'dashboard-heading-'+Math.random().toString(36).substring(7);
+            dash_grid.addWidget(
+                $('<div class="grid-stack-item" data-type="heading">'+
+                    '<div class="grid-stack-item-content" id="'+el_id+'">'+
+                        '<'+htag+' class="'+hclass+'">'+$('#dashboard-add-heading').val()+'</'+htag+'>'+
+                    '</div>'+
+                '</div>'),
+                0, 0, 6, 3
+            );
+        }
+        $('#dashboard-add-heading-modal').modal('hide');
+    });
+
+    // Edit Heading
+    $('#dashboard').on('click', '.grid-stack-item[data-type="heading"] .edit-btn', function(){
+        var el = $(this).siblings('.grid-stack-item-content');
+        var el_id = el.attr('id');
+        var hclass = el.children().attr('class');
+        var htext = el.children().text();
+        $('#dashboard-add-heading-modal').modal('show');
+        $('#dashboard-add-heading-modal form').data('edit-target', '#'+el_id);
+        $('#dashboard-add-heading-modal .show-create').hide();
+        $('#dashboard-add-heading-modal .show-edit').show();
+        $('#dashboard-add-heading-class').val(hclass);
+        $('#dashboard-add-heading').val(htext).removeClass().addClass(hclass);
+    });
+
+    // Add Custom HTML to dashboard
+    $('#dashboard-add-html-modal form').submit(function(e){
+        e.preventDefault();
+        var dash_grid = $('.grid-stack').data('gridstack');
+        dash_grid.addWidget(
+            $('<div class="grid-stack-item" data-type="html">'+
+                '<div class="grid-stack-item-content">'+
+                    $('#dashboard-add-html').val()+
+                '</div>'+
+            '</div>'),
+            0, 0, 6, 3
+        );
+        $('#dashboard-add-html-modal').modal('hide');
+        $('#dashboard-add-html').val('');
+    })
+
+    // Remove validation when adding a title
+    $('#dashboard_title').keyup(function(){
+        if($(this).hasClass('is-invalid')){
+            $('#dashboard_title_feedback').slideUp();
+            $(this).removeClass('is-invalid');
+        }
+    });
+
+    // Save dashboard
+    $('#save-plot-btn').click(function(){
+
+        // Check that we have a title
+        if(!$('#dashboard_title').val().trim()){
+            $('#dashboard_title_feedback').slideDown();
+            $('#dashboard_title').addClass('is-invalid');
+            return false;
+        }
+
+        // Check that we have some elements in the dashboard
+        if($('.grid-stack').children().length == 0){
+            toastr.error('The dashboard is empty! Please add something before saving.');
+            return false;
+        }
+
+        var dash_grid = $('.grid-stack').data('gridstack');
+        serializedData = _.map($('.grid-stack > .grid-stack-item:visible'), function (el) {
+            el = $(el);
+            var node = el.data('_gridstack_node');
+            var ret_data = {
+                type: el.data('type'),
+                x: node.x,
+                y: node.y,
+                width: node.width,
+                height: node.height
+            };
+            if(el.data('type') == 'plot'){
+                ret_data['plot_id'] = el.data('plot_id');
+            }
+            else if(el.data('type') == 'heading'){
+                ret_data['html_contents'] = el.find('.grid-stack-item-content').html();
+            }
+            else if(el.data('type') == 'html'){
+                ret_data['html_contents'] = el.find('.grid-stack-item-content').html();
+            }
+            return ret_data;
+        });
+
+        // Send the plot details to save
+        window.ajax_update = $.ajax({
+            url: '/api/save_dashboard',
+            type: 'post',
+            data: JSON.stringify({
+                'title': $('#dashboard_title').val(),
+                'data': serializedData,
+                'is_public': false
+            }),
+            headers : { access_token:window.token },
+            dataType: 'json',
+            contentType: 'application/json; charset=UTF-8',
+            success: function(data){
+                if (data['success']){
+                    window.location = '/dashboard/view/'+data['dashboard_id'];
+                }
+                // AJAX data['success'] was false
+                else {
+                    console.log(data);
+                    toastr.error('There was an error whilst saving this dashboard.');
+                }
+            },
+            error: function(data){
+                console.log(data);
+                toastr.error('There was an error saving this dashboard.');
+            }
+        });
+    });
+
+    // Add an area that deletes an object when dropped
+    $('#delete-area').droppable({
+        tolerance: 'pointer',
+        drop: function(event, ui) {
+            $(ui.draggable).remove();
+        }
+    });
+});
+</script>
+{% endblock %}

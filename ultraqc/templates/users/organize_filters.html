@@ -1,0 +1,41 @@
+
+{% extends "layout.html" %}
+{% block content %}
+<h1>Edit Sample Filters</h1>
+
+<table class="table" id="filter_table">
+    <thead>
+        <tr>
+            <th>Filter Group</th>
+            <th>Filter Name</th>
+            <th>Matching Samples</th>
+            <th>Actions</th>
+        </tr>
+    {% for sfgroup in sample_filters.keys() | sort %}
+        {% for sf in sample_filters[sfgroup] %}
+        {% set ns = sample_filter_counts.get(sf['id'], '?') %}
+            <tr>
+                <td>{{ sfgroup }}</td>
+                <td>{{ sf['name'] }}</td>
+                <td>
+                    <span class="badge badge-pill {% if ns == 0 %}badge-danger{% elif ns > 100 %}badge-warning{% else %}badge-success{% endif %}">
+                        {{ ns }} samples
+                    </span>
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary" data-toggle="modal" data-target="#create_filter_modal" data-myfilter="{{ sf['filters'] }}" data-filterid="{{ sf['id'] }}"><i class="fa fa-pencil" aria-hidden="true"></i> Edit</button>
+                    <button class="btn btn-sm btn-outline-danger" data-filterid="{{ sf['id'] }}"><i class="fa fa-trash" aria-hidden="true"></i>  Delete</button>
+                </td>
+            </tr>
+        {% endfor %}
+    {% endfor %}
+</table>
+
+{% include "public/filter_samples_modal.html" %}
+
+{% endblock %}
+{% block js %}
+<script type="text/javascript">
+
+</script>
+{% endblock %}

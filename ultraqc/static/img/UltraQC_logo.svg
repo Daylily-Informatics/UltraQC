@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 100">
+  <defs>
+    <filter id="neonGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <linearGradient id="neonGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#00ffff;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#00d4aa;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ff00ff;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a0a0f;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1a1a2e;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="400" height="100" rx="8" fill="url(#bgGradient)"/>
+  <g stroke="#00ffff" stroke-width="0.5" opacity="0.3">
+    <path d="M10,20 L30,20 L35,25 L50,25"/>
+    <path d="M10,80 L40,80 L45,75 L60,75"/>
+    <path d="M350,30 L370,30 L375,35 L390,35"/>
+    <path d="M340,70 L360,70 L365,65 L390,65"/>
+  </g>
+  <g fill="#00ffff" opacity="0.5">
+    <circle cx="15" cy="20" r="2"/>
+    <circle cx="15" cy="80" r="2"/>
+    <circle cx="385" cy="35" r="2"/>
+    <circle cx="385" cy="65" r="2"/>
+  </g>
+  <g transform="translate(40, 25)" filter="url(#neonGlow)">
+    <path d="M0,0 Q15,12 0,25 Q-15,37 0,50" stroke="#00ffff" stroke-width="3" fill="none"/>
+    <path d="M20,0 Q5,12 20,25 Q35,37 20,50" stroke="#ff00ff" stroke-width="3" fill="none"/>
+    <line x1="3" y1="8" x2="17" y2="8" stroke="#00d4aa" stroke-width="2"/>
+    <line x1="3" y1="25" x2="17" y2="25" stroke="#00d4aa" stroke-width="2"/>
+    <line x1="3" y1="42" x2="17" y2="42" stroke="#00d4aa" stroke-width="2"/>
+  </g>
+  <text x="90" y="65" font-family="Orbitron, Rajdhani, Share Tech, sans-serif" font-size="42" font-weight="700" fill="url(#neonGradient)" filter="url(#neonGlow)">
+    Ultra<tspan fill="#ffffff">QC</tspan>
+  </text>
+  <text x="92" y="82" font-family="Roboto, sans-serif" font-size="10" fill="#888888" letter-spacing="2">
+    MULTIOMICS QUALITY CONTROL
+  </text>
+  <line x1="92" y1="86" x2="280" y2="86" stroke="url(#neonGradient)" stroke-width="1" opacity="0.5"/>
+</svg>

@@ -1,0 +1,737 @@
+/* ============================================
+   UltraQC - Sci-Fi Neon Dark Theme
+   Modern MultiQC Data Aggregation Platform
+   ============================================ */
+
+/* === CSS Variables (Neon Color Palette) === */
+:root {
+    --uqc-bg-primary: #0a0a0f;
+    --uqc-bg-secondary: #12121a;
+    --uqc-bg-tertiary: #1a1a2e;
+    --uqc-bg-card: #16161f;
+    --uqc-bg-elevated: #1e1e2d;
+
+    --uqc-text-primary: #e0e0e0;
+    --uqc-text-secondary: #a0a0a0;
+    --uqc-text-muted: #666666;
+
+    --uqc-neon-cyan: #00ffff;
+    --uqc-neon-magenta: #ff00ff;
+    --uqc-neon-green: #00d4aa;
+    --uqc-neon-blue: #00a8ff;
+    --uqc-neon-purple: #8b5cf6;
+    --uqc-neon-orange: #ff6b35;
+
+    --uqc-gradient: linear-gradient(135deg, var(--uqc-neon-cyan), var(--uqc-neon-magenta));
+    --uqc-gradient-subtle: linear-gradient(135deg, rgba(0,255,255,0.1), rgba(255,0,255,0.1));
+
+    --uqc-border: #2a2a3d;
+    --uqc-border-glow: rgba(0, 255, 255, 0.3);
+
+    --uqc-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    --uqc-shadow-glow: 0 0 20px rgba(0, 255, 255, 0.2);
+
+    --uqc-transition: all 0.3s ease;
+}
+
+/* === Base Styles === */
+* {
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    background: var(--uqc-bg-primary);
+    background-image:
+        radial-gradient(ellipse at top left, rgba(0, 255, 255, 0.03) 0%, transparent 50%),
+        radial-gradient(ellipse at bottom right, rgba(255, 0, 255, 0.03) 0%, transparent 50%);
+    color: var(--uqc-text-primary);
+    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100vh;
+}
+
+/* === Typography === */
+@font-face { font-family: Roboto; src: url(../fonts/roboto/Roboto-Thin.ttf); font-weight: 100; }
+@font-face { font-family: Roboto; src: url(../fonts/roboto/Roboto-Light.ttf); font-weight: 300; }
+@font-face { font-family: Roboto; src: url(../fonts/roboto/Roboto-Regular.ttf); font-weight: 400; }
+@font-face { font-family: Roboto; src: url(../fonts/roboto/Roboto-Medium.ttf); font-weight: 500; }
+@font-face { font-family: Roboto; src: url(../fonts/roboto/Roboto-Bold.ttf); font-weight: 700; }
+@font-face { font-family: Roboto; src: url(../fonts/roboto/Roboto-Black.ttf); font-weight: 900; }
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Roboto', sans-serif;
+    color: var(--uqc-text-primary);
+    font-weight: 600;
+}
+
+h1 { font-size: 2.5rem; }
+h2 { font-size: 2rem; }
+h3 { font-size: 1.75rem; }
+
+a {
+    color: var(--uqc-neon-cyan);
+    text-decoration: none;
+    transition: var(--uqc-transition);
+}
+
+a:hover {
+    color: var(--uqc-neon-magenta);
+    text-shadow: 0 0 10px var(--uqc-neon-cyan);
+}
+
+code {
+    background: var(--uqc-bg-tertiary);
+    color: var(--uqc-neon-green);
+    padding: 0.2em 0.4em;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+.monospace {
+    font-family: 'JetBrains Mono', 'Fira Code', Menlo, Monaco, Consolas, monospace;
+}
+
+/* === Navigation === */
+nav.navbar {
+    background: var(--uqc-bg-secondary) !important;
+    border-bottom: 1px solid var(--uqc-border);
+    box-shadow: var(--uqc-shadow);
+    margin-bottom: 0;
+    padding: 0.5rem 1rem;
+}
+
+.navbar-brand {
+    font-family: 'Roboto', sans-serif;
+    font-weight: 700;
+    font-size: 1.5rem;
+    background: var(--uqc-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.navbar-dark .navbar-nav .nav-link {
+    color: var(--uqc-text-secondary);
+    transition: var(--uqc-transition);
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+}
+
+.navbar-dark .navbar-nav .nav-link:hover,
+.navbar-dark .navbar-nav .nav-link.active {
+    color: var(--uqc-neon-cyan);
+    background: rgba(0, 255, 255, 0.1);
+}
+
+/* === Page Content === */
+.page-content {
+    background: var(--uqc-bg-secondary);
+    border-radius: 12px;
+    margin: 1rem;
+    padding: 2rem;
+    box-shadow: var(--uqc-shadow);
+    border: 1px solid var(--uqc-border);
+}
+
+/* === Cards === */
+.card {
+    background: var(--uqc-bg-card);
+    border: 1px solid var(--uqc-border);
+    border-radius: 12px;
+    box-shadow: var(--uqc-shadow);
+    transition: var(--uqc-transition);
+}
+
+.card:hover {
+    border-color: var(--uqc-border-glow);
+    box-shadow: var(--uqc-shadow-glow);
+}
+
+.card-header {
+    background: var(--uqc-bg-elevated);
+    border-bottom: 1px solid var(--uqc-border);
+    color: var(--uqc-text-primary);
+    font-weight: 600;
+}
+
+.card-body {
+    color: var(--uqc-text-secondary);
+}
+
+/* === Buttons === */
+input[type=button], button, .btn {
+    cursor: pointer;
+    transition: var(--uqc-transition);
+}
+
+.btn-primary {
+    background: var(--uqc-gradient);
+    border: none;
+    color: var(--uqc-bg-primary);
+    font-weight: 600;
+    padding: 0.5rem 1.5rem;
+    border-radius: 8px;
+}
+
+.btn-primary:hover {
+    box-shadow: var(--uqc-shadow-glow);
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background: var(--uqc-bg-tertiary);
+    border: 1px solid var(--uqc-border);
+    color: var(--uqc-text-primary);
+}
+
+.btn-secondary:hover {
+    background: var(--uqc-bg-elevated);
+    border-color: var(--uqc-neon-cyan);
+}
+
+.btn-outline-primary {
+    border: 2px solid var(--uqc-neon-cyan);
+    color: var(--uqc-neon-cyan);
+    background: transparent;
+}
+
+.btn-outline-primary:hover {
+    background: var(--uqc-neon-cyan);
+    color: var(--uqc-bg-primary);
+}
+
+button.disabled, .btn.disabled, button:disabled, .btn:disabled {
+    cursor: not-allowed !important;
+    opacity: 0.5;
+}
+
+/* === Forms === */
+.form-control {
+    background: var(--uqc-bg-tertiary);
+    border: 1px solid var(--uqc-border);
+    color: var(--uqc-text-primary);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    transition: var(--uqc-transition);
+}
+
+.form-control:focus {
+    background: var(--uqc-bg-tertiary);
+    border-color: var(--uqc-neon-cyan);
+    box-shadow: 0 0 0 3px rgba(0, 255, 255, 0.1);
+    color: var(--uqc-text-primary);
+    outline: none;
+}
+
+.form-control::placeholder {
+    color: var(--uqc-text-muted);
+}
+
+label {
+    font-weight: 500;
+    color: var(--uqc-text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+/* === Tables === */
+.table {
+    color: var(--uqc-text-primary);
+}
+
+.table thead th {
+    background: var(--uqc-bg-tertiary);
+    border-bottom: 2px solid var(--uqc-neon-cyan);
+    color: var(--uqc-neon-cyan);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+}
+
+.table tbody tr {
+    border-bottom: 1px solid var(--uqc-border);
+    transition: var(--uqc-transition);
+}
+
+.table tbody tr:hover {
+    background: rgba(0, 255, 255, 0.05);
+}
+
+/* === Footer === */
+footer {
+    background: var(--uqc-bg-secondary);
+    border-top: 1px solid var(--uqc-border);
+    color: var(--uqc-text-muted);
+    font-size: 0.8rem;
+    padding: 2rem 0;
+    margin-top: 2rem;
+}
+
+footer a {
+    color: var(--uqc-neon-cyan);
+}
+
+footer a:hover {
+    color: var(--uqc-neon-magenta);
+}
+
+/* === UltraQC Specific Styles === */
+.ultraqc-header-samplecount {
+    text-align: right;
+    font-size: 1.6rem;
+    font-weight: 300;
+    padding: 1.6rem 3rem;
+    color: var(--uqc-text-secondary);
+}
+
+.ultraqc-header-samplecount a {
+    color: var(--uqc-neon-cyan);
+    text-decoration: none;
+}
+
+.ultraqc-header-samplecount a:hover {
+    text-shadow: var(--uqc-shadow-glow);
+}
+
+#ultraqc-homepage-jumbotron {
+    background: var(--uqc-gradient-subtle);
+    border-radius: 16px;
+    padding: 3rem;
+    text-align: center;
+    border: 1px solid var(--uqc-border);
+}
+
+#ultraqc-homepage-title-img {
+    max-width: 400px;
+    margin: 20px auto;
+    display: block;
+}
+
+/* === Alerts === */
+.alert {
+    border-radius: 8px;
+    border: 1px solid;
+}
+
+.alert-success {
+    background: rgba(0, 212, 170, 0.1);
+    border-color: var(--uqc-neon-green);
+    color: var(--uqc-neon-green);
+}
+
+.alert-danger {
+    background: rgba(255, 107, 53, 0.1);
+    border-color: var(--uqc-neon-orange);
+    color: var(--uqc-neon-orange);
+}
+
+.alert-info {
+    background: rgba(0, 255, 255, 0.1);
+    border-color: var(--uqc-neon-cyan);
+    color: var(--uqc-neon-cyan);
+}
+
+.alert-warning {
+    background: rgba(255, 0, 255, 0.1);
+    border-color: var(--uqc-neon-magenta);
+    color: var(--uqc-neon-magenta);
+}
+
+blockquote {
+    border-left: 4px solid var(--uqc-neon-cyan);
+    background: var(--uqc-bg-tertiary);
+    padding: 1rem 1.5rem;
+    margin: 1.5rem 0;
+    color: var(--uqc-text-secondary);
+    border-radius: 0 8px 8px 0;
+}
+
+/* === Loading Spinner === */
+.loading-spinner {
+    color: var(--uqc-neon-cyan);
+    font-size: 1.2rem;
+}
+
+@keyframes neon-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.loading-spinner i {
+    animation: neon-pulse 1.5s ease-in-out infinite;
+}
+
+/* === Modals === */
+.modal-content {
+    background: var(--uqc-bg-secondary);
+    border: 1px solid var(--uqc-border);
+    border-radius: 12px;
+}
+
+.modal-header {
+    background: var(--uqc-bg-tertiary);
+    border-bottom: 1px solid var(--uqc-border);
+}
+
+.modal-header .close {
+    color: var(--uqc-text-primary);
+}
+
+.modal-xl {
+    max-width: 1200px;
+    width: 90%;
+}
+
+/* === Plot Chooser Cards === */
+.plot-chooser-card {
+    margin-bottom: 1rem;
+    background: var(--uqc-bg-card);
+    border: 1px solid var(--uqc-border);
+    border-radius: 12px;
+    transition: var(--uqc-transition);
+}
+
+.plot-chooser-card:hover {
+    border-color: var(--uqc-neon-cyan);
+    box-shadow: var(--uqc-shadow-glow);
+}
+
+.plot-chooser-card h4 {
+    margin-top: 0;
+    font-weight: 500;
+    color: var(--uqc-text-primary);
+}
+
+.plot-chooser-card a {
+    color: var(--uqc-neon-cyan);
+}
+
+.plot-chooser-card a:hover {
+    text-decoration: none;
+    color: var(--uqc-neon-magenta);
+}
+
+.card-header .btn.btn-sm {
+    margin: -3px 0;
+}
+
+.card .card-body pre {
+    margin-bottom: 0;
+    background: var(--uqc-bg-primary);
+    border-radius: 8px;
+    padding: 1rem;
+    color: var(--uqc-neon-green);
+}
+
+.plot-chooser-card .card-body {
+    padding: 0.8rem;
+}
+
+/* === Filter Styles === */
+.new-filter-group-card {
+    margin-bottom: 1rem;
+    background: var(--uqc-bg-card);
+    border: 1px solid var(--uqc-border);
+}
+
+.new-filter-group-card .card-body {
+    padding: 0;
+}
+
+.new-filter-group-card .card-body .filter-group-table {
+    margin: 0;
+    background: transparent;
+}
+
+.new-filter-group-card .card-body .filter-group-table td:last-child {
+    min-width: 0;
+}
+
+.new-filter-group-card .card-body .filter-group-table tbody td {
+    padding: 0;
+    border-color: var(--uqc-border);
+}
+
+.new-filter-group-card .card-body .filter-group-table tbody td div {
+    padding: .75rem;
+}
+
+.new-filter-group-card .card-body .filter-group-table tbody td:last-child div {
+    padding: 0.5rem 0.75rem;
+    text-align: center;
+}
+
+.new-filter-add {
+    margin: .25rem 0;
+}
+
+.new-filter-group-add-btn {
+    margin-left: 0.5rem;
+}
+
+.num_filtered_samples {
+    font-size: 50%;
+    font-weight: 400;
+    vertical-align: middle;
+    margin-left: 12px;
+    color: var(--uqc-neon-cyan);
+}
+
+.activeFiltersActions button {
+    margin-left: 8px;
+}
+
+.new-filter .btn-filter-type {
+    padding: 20px;
+    border: 3px dashed var(--uqc-border);
+    border-radius: 12px;
+    min-width: 200px;
+    margin-bottom: 20px;
+    background: var(--uqc-bg-card);
+    color: var(--uqc-text-secondary);
+    transition: var(--uqc-transition);
+}
+
+.new-filter .btn-filter-type:hover {
+    border-color: var(--uqc-neon-cyan);
+    color: var(--uqc-neon-cyan);
+}
+
+.new-filter .filter-filterTypeBox {
+    display: none;
+}
+
+/* === Plot Setup === */
+.plot-setup .card {
+    margin-bottom: 2rem;
+}
+
+.plot-setup .card .card-body .list-group {
+    height: 300px;
+    overflow-y: auto;
+    background: var(--uqc-bg-tertiary);
+    border-radius: 8px;
+}
+
+.plot-setup .card .card-body .list-group.with-filter {
+    height: 248px;
+}
+
+.list-group-item {
+    background: transparent;
+    border-color: var(--uqc-border);
+    color: var(--uqc-text-primary);
+}
+
+.list-group-item:hover {
+    background: rgba(0, 255, 255, 0.05);
+}
+
+.list-group-item.active {
+    background: var(--uqc-gradient);
+    border-color: transparent;
+    color: var(--uqc-bg-primary);
+}
+
+#sample-filter-group-select .nav-link.active {
+    color: var(--uqc-neon-cyan);
+    background-color: transparent;
+    background-image: none;
+    border: 1px solid var(--uqc-neon-cyan);
+    margin: 0 -1px;
+}
+
+/* === UltraQC Plots === */
+.ultraqc_plot .card-body {
+    min-height: 500px;
+    text-align: center;
+    padding: 0;
+    background: var(--uqc-bg-tertiary);
+}
+
+.ultraqc_plot .card-body p {
+    margin-top: 100px;
+    color: var(--uqc-text-muted);
+}
+
+.plot_header_config div {
+    padding: 8px 15px;
+    text-align: left;
+    float: left;
+}
+#dist_plotdiv {
+    clear: left;
+}
+
+/* === Favourites === */
+#favourite_plot .favourite-plot-url,
+#favourite_plot #plot-url {
+    margin-left: 1rem;
+    font-size: 16px;
+    color: var(--uqc-text-muted);
+    font-weight: normal;
+    display: none;
+}
+
+#favourite_plot .favourite-plot-url {
+    display: inline;
+}
+
+#favourite_plot .favourite-plot-url #plot-url {
+    margin-left: auto;
+}
+
+#plot_favourites_table tbody tr {
+    cursor: pointer;
+    transition: var(--uqc-transition);
+}
+
+#plot_favourites_table tbody tr:hover {
+    background-color: rgba(0, 255, 255, 0.1);
+}
+
+/* === Dashboard === */
+#dashboard .grid-stack {
+    min-height: 320px;
+}
+
+#dashboard .grid-stack-item-content {
+    border: 1px solid var(--uqc-border);
+    border-radius: 12px;
+    cursor: move;
+    background: var(--uqc-bg-card);
+}
+
+#dashboard .grid-stack-item .edit-btn {
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    display: none;
+}
+
+#dashboard .grid-stack-item:hover .edit-btn {
+    display: inline-block;
+}
+
+#dashboard .grid-stack-item-content.loading {
+    background-color: var(--uqc-bg-tertiary);
+    text-align: center;
+}
+
+.grid-stack-loading {
+    display: inline-block;
+    margin: 4rem 0.5rem;
+    color: var(--uqc-neon-cyan);
+}
+
+#delete-area {
+    text-align: center;
+    border: 2px dashed var(--uqc-neon-orange);
+    padding: .4rem 1rem;
+    font-size: 1.25rem;
+    line-height: 1.5;
+    border-radius: 12px;
+    color: var(--uqc-neon-orange);
+    background: rgba(255, 107, 53, 0.1);
+}
+
+#dashboard-add-heading {
+    display: block;
+    width: 100%;
+    padding: .5rem .75rem;
+    background-color: var(--uqc-bg-tertiary);
+    background-image: none;
+    background-clip: padding-box;
+    border: 1px solid var(--uqc-border);
+    border-radius: 8px;
+    color: var(--uqc-text-primary);
+    transition: var(--uqc-transition);
+}
+
+#dashboard-add-heading:focus {
+    border-color: var(--uqc-neon-cyan);
+    box-shadow: 0 0 0 3px rgba(0, 255, 255, 0.1);
+}
+
+.dashboard-body {
+    position: relative;
+    overflow: hidden;
+}
+
+.dashboard-body-block {
+    position: absolute;
+    display: block;
+    overflow: hidden;
+}
+
+.dashboard-block-plot.loading {
+    background-color: var(--uqc-bg-tertiary);
+    border: 1px solid var(--uqc-border);
+    height: 100%;
+    border-radius: 8px;
+}
+
+/* === Neon Accents === */
+.neon-text {
+    background: var(--uqc-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.neon-border {
+    border: 2px solid var(--uqc-neon-cyan);
+    box-shadow: var(--uqc-shadow-glow);
+}
+
+.neon-glow {
+    animation: neon-flicker 2s ease-in-out infinite;
+}
+
+@keyframes neon-flicker {
+    0%, 100% {
+        text-shadow: 0 0 5px var(--uqc-neon-cyan), 0 0 10px var(--uqc-neon-cyan);
+    }
+    50% {
+        text-shadow: 0 0 2px var(--uqc-neon-cyan), 0 0 5px var(--uqc-neon-cyan);
+    }
+}
+
+/* === Scrollbar Styling === */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--uqc-bg-tertiary);
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--uqc-border);
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--uqc-neon-cyan);
+}
+
+/* === Responsive Adjustments === */
+@media (max-width: 768px) {
+    .page-content {
+        margin: 0.5rem;
+        padding: 1rem;
+    }
+
+    #ultraqc-homepage-jumbotron {
+        padding: 1.5rem;
+    }
+
+    #ultraqc-homepage-title-img {
+        max-width: 280px;
+    }
+}
