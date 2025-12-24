@@ -19,7 +19,7 @@
 
 ## 🚀 Overview
 
-UltraQC is a modern, high-performance web application that collects and visualizes data from multiple [MultiQC](https://multiqc.info) reports. Built with **FastAPI** and featuring a sleek sci-fi neon dark theme.
+UltraQC is a modern, high-performance web application that collects and visualizes data from multiple [MultiQC](https://multiqc.info) reports. Built with **FastAPI**  and **postgres**.
 
 ### ✨ Features
 
