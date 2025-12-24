@@ -49,7 +49,7 @@ git clone https://github.com/daylily-informatics/UltraQC.git
 cd UltraQC
 
 # Create virtual environment
-python -m venv .venv
+python3.10 -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 # Install with development dependencies
