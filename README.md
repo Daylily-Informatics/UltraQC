@@ -38,7 +38,7 @@ UltraQC is a modern, high-performance web application that collects and visualiz
 ### Quick Install (pip)
 
 ```bash
-pip install ultraqc
+#NOT YET pip install ultraqc
 ```
 
 ### Development Install
@@ -49,7 +49,7 @@ git clone https://github.com/Daylily-Informatics/UltraQC.git
 cd UltraQC
 
 # Create virtual environment
-python -m venv .venv
+python3.10 -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 # Install with development dependencies
