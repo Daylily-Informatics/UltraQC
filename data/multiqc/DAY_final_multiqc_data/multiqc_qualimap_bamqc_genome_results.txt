@@ -1,0 +1,2 @@
+Sample	total_reads	mapped_reads	mapped_bases	sequenced_bases	mean_insert_size	median_insert_size	mean_mapping_quality	gc_percentage	general_error_rate	homopolymer_indels	mean_coverage	percentage_aligned
+RIH0_ANA0-HG002_DBC0_0.strobe.mrkdup.sort	249854	247569	36265038	36237380	33257.4379	566.0	42.7705	39.86	0.62	43.55	0.0117	99.08546591209266

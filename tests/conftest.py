@@ -49,12 +49,8 @@ def app():
 async def async_engine():
     """Create an async engine for tests."""
     config = TestConfig()
-    # Convert to async URL
-    db_url = config.SQLALCHEMY_DATABASE_URI
-    if db_url.startswith("sqlite://"):
-        db_url = db_url.replace("sqlite://", "sqlite+aiosqlite://")
-    elif db_url.startswith("postgresql://"):
-        db_url = db_url.replace("postgresql://", "postgresql+asyncpg://")
+    # Use async URL directly
+    db_url = config.DATABASE_URL_ASYNC
 
     engine = create_async_engine(db_url, echo=False)
 
@@ -118,3 +114,23 @@ async def user(db_session):
 async def session(db_session) -> AsyncSession:
     """Alias for db_session."""
     return db_session
+
+
+@pytest_asyncio.fixture
+async def token(user):
+    """
+    An API token for the test user.
+    """
+    return user.api_token
+
+
+@pytest_asyncio.fixture
+async def admin_token(db_session):
+    """
+    An API token for an admin user.
+    """
+    admin = UserFactory(password="adminpass", is_admin=True, active=True)
+    db_session.add(admin)
+    await db_session.commit()
+    await db_session.refresh(admin)
+    return admin.api_token

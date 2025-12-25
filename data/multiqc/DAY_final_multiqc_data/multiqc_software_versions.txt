@@ -1,0 +1,4 @@
+Sample	FastQC	Bcftools	Samtools
+Bcftools		1.21	
+FastQC	0.11.9		
+Samtools			1.21

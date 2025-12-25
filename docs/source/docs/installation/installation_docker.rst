@@ -3,7 +3,7 @@ Docker
 
 UltraQC offers two ways of getting a containerized setup running:
 
-1. A single Docker container containing UltraQC with a Gunicorn WSGI HTTP server
+1. A single Docker container containing UltraQC with Uvicorn ASGI HTTP server
 2. A Docker Compose stack containing the UltraQC container, a Postgres container and a NGINX container
 
 .. _ultraqc_docker_container:
@@ -15,10 +15,8 @@ Overview
 ~~~~~~~~~~
 
 The UltraQC container is based on the `Node container <https://hub.docker.com/_/node>`_
-to compile all Javascript scripts and the `Gunicorn Flask container <https://hub.docker.com/r/tiangolo/meinheld-gunicorn-flask/dockerfile>`_
-providing Gunicorn, Flask and UltraQC preconfigured for production deployments.
-The `Gunicorn Flask <https://hub.docker.com/r/tiangolo/meinheld-gunicorn-flask/dockerfile>`_ container
-is also the one spinning up the final server.
+to compile all Javascript scripts and a Python container with Uvicorn
+providing FastAPI and UltraQC preconfigured for production deployments.
 
 Pulling the docker image from dockerhub
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -27,9 +25,9 @@ To run UltraQC with docker, simply use the following command:
 
 .. code:: bash
 
-   docker run -p 80:80 multiqc/ultraqc
+   docker run -p 8000:8000 daylily/ultraqc
 
-This will pull the latest image from `dockerhub`_ and run UltraQC on port 80.
+This will pull the latest image from `dockerhub`_ and run UltraQC on port 8000.
 
 Note that you will need to publish the port in order to access it from
 the host, or other machines. For more information, read https://docs.docker.com/engine/reference/run/ .
@@ -42,22 +40,19 @@ UltraQC code from GitHub. Simply cd to the UltraQC root directory and run
 
 .. code:: bash
 
-   docker build . -t multiqc/ultraqc
+   docker build . -t daylily/ultraqc
 
 You can then run UltraQC as described above:
 
 .. code:: bash
 
-   docker run -p 80:80 multiqc/ultraqc
+   docker run -p 8000:8000 daylily/ultraqc
 
 Configuration
 ~~~~~~~~~~~~~~~
 
-Besides the sections below it is also recommended to read the
-`Gunicorn Flask container documentation <https://github.com/tiangolo/meinheld-gunicorn-flask-docker>`_,
-which explains how to customize the ``host`` IP where Gunicorn listens
-to requests, the ``port`` the container should listen on and ``bind``, the actual
-host and port passed to gunicorn, let alone custom Gunicorn configuration files.
+UltraQC uses Uvicorn as the ASGI server. You can customize the host, port,
+and other settings via environment variables.
 
 Environment variables
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -66,38 +61,33 @@ By default, the UltraQC related environment variables are set to:
 
 .. code-block::
 
-   MEGAQC_PRODUCTION=1
-   MEGAQC_SECRET="SuperSecretValueYouShouldReallyChange"
-   MEGAQC_CONFIG=""
-   APP_MODULE=ultraqc.wsgi:app
-   DB_HOST="127.0.0.1"
-   DB_PORT="5432"
-   DB_NAME="ultraqc"
-   DB_USER="ultraqc"
-   DB_PASS="ultraqcpswd"
+   ULTRAQC_SECRET="SuperSecretValueYouShouldReallyChange"
+   ULTRAQC_DATABASE_URL="postgresql://ultraqc:ultraqcpswd@127.0.0.1:5432/ultraqc"
+   ULTRAQC_HOST="0.0.0.0"
+   ULTRAQC_PORT="8000"
 
 To run UltraQC with custom environment variables use the ``-e key=value`` run options.
 For more information, please read
 `Docker - setting environment variables <https://docs.docker.com/engine/reference/commandline/run/#set-environment-variables--e---env---env-file>`_.
-Running UltraQC for example with a custom database password works as follows:
+Running UltraQC for example with a custom database URL works as follows:
 
 .. code-block:: bash
 
-   docker run -e DB_PASS=someotherpassword multiqc/ultraqc
+   docker run -e ULTRAQC_DATABASE_URL=postgresql://user:pass@host/db daylily/ultraqc
 
 Furthermore, be aware that the default latest tag will typically be a development version
 and may not be very stable. You can specify a tagged version to run a release instead:
 
 .. code:: bash
 
-   docker run -p 80:80 multiqc/ultraqc:v0.2.0
+   docker run -p 8000:8000 daylily/ultraqc:v2.0.0
 
 Also note that docker will use a local version of the image if it
 exists. To pull the latest version of UltraQC use the following command:
 
 .. code:: bash
 
-   docker pull multiqc/ultraqc
+   docker pull daylily/ultraqc
 
 Using persistent data
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -117,13 +107,13 @@ To create or re-use a docker volume named ``pg_data``:
 
 .. code:: bash
 
-   docker run -p 80:80 -v pg_data:/usr/local/lib/postgresql multiqc/ultraqc
+   docker run -p 8000:8000 -v pg_data:/usr/local/lib/postgresql daylily/ultraqc
 
 The same can be done for a log directory volume called ``pg_logs``
 
 .. code:: bash
 
-   docker run -p 80:80 -v pg_data:/usr/local/lib/postgresql -v pg_logs:/var/log/postgresql multiqc/ultraqc
+   docker run -p 8000:8000 -v pg_data:/usr/local/lib/postgresql -v pg_logs:/var/log/postgresql daylily/ultraqc
 
 If you did not specify a volume name, docker will have given it a long
 hex string as a unique name. If you do not use volumes frequently, you
@@ -181,7 +171,7 @@ on ``localhost:5432``, looks as follows:
 
 .. code:: bash
 
-   docker run --network="host" -p 5432 multiqc/ultraqc
+   docker run --network="host" daylily/ultraqc
 
 Note that by default ``localhost=127.0.0.1``.
 
@@ -206,8 +196,8 @@ Usage
 ~~~~~~~~
 
 Inside the `deployment folder`_ the `docker-compose`_ configuration
-together with the associated `.env <https://github.com/MultiQC/UltraQC/blob/main/deployment/.env>`_ file
-are found. To spin up all containers simply run from inside the `deployment folder <https://github.com/MultiQC/UltraQC/blob/main/deployment>`_:
+together with the associated `.env <https://github.com/Daylily-Informatics/UltraQC/blob/main/deployment/.env>`_ file
+are found. To spin up all containers simply run from inside the `deployment folder <https://github.com/Daylily-Informatics/UltraQC/blob/main/deployment>`_:
 
 .. code:: bash
 
@@ -229,7 +219,7 @@ Environment variables
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The default environment variables for UltraQC used when starting the :ref:`ultraqc_docker_container`
-are defined inside the `.env <https://github.com/MultiQC/UltraQC/blob/main/deployment/.env>`_ file.
+are defined inside the `.env <https://github.com/Daylily-Informatics/UltraQC/blob/main/deployment/.env>`_ file.
 Simply edit the file and the new environment variables will be passed to the :ref:`ultraqc_docker_container`.
 
 Further runtime arguments
@@ -239,9 +229,9 @@ Further runtime arguments can be added to a
 `command section <https://docs.docker.com/compose/compose-file/#command>`_
 inside the `docker-compose`_ configuration file.
 
-.. _deployment_folder: https://github.com/MultiQC/UltraQC/blob/main/deployment
-.. _docker-compose: https://github.com/MultiQC/UltraQC/blob/main/deployment/docker-compose.yml
-.. _dockerhub: https://hub.docker.com/r/multiqc/ultraqc/
+.. _deployment_folder: https://github.com/Daylily-Informatics/UltraQC/blob/main/deployment
+.. _docker-compose: https://github.com/Daylily-Informatics/UltraQC/blob/main/deployment/docker-compose.yml
+.. _dockerhub: https://hub.docker.com/r/daylily/ultraqc/
 
 HTTPS
 ~~~~~

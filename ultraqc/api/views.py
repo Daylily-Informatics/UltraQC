@@ -277,7 +277,7 @@ async def report_filter_fields(
     """Get report filter fields."""
     data = await request.json() if request.method == "POST" else {}
     filters = get_filter_from_data(data)
-    return_data = await aggregate_new_parameters(session, user, filters, True)
+    return_data = aggregate_new_parameters(session, user, filters, True)
     return JSONResponse(
         content={
             "success": True,
@@ -296,7 +296,7 @@ async def get_sample_meta_fields(
     """Get sample metadata fields."""
     data = await request.json() if request.method == "POST" else {}
     filters = get_filter_from_data(data)
-    return_data = await aggregate_new_parameters(session, user, filters, False)
+    return_data = aggregate_new_parameters(session, user, filters, False)
     return JSONResponse(
         content={
             "success": True,

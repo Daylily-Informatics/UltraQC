@@ -1,0 +1,2 @@
+Sample	Read Group	SNPS	M Reads	Average Depth	Contamination (Seq)	FREEELK1	FREELK0	FREE_RH	FREE_RA	DPREF	RDPHET	RDPALT
+RIH0_ANA0-HG002_DBC0_0.strobe	NA	NA	NA	NA	0.0	-1.0	-1.0	NA	NA	NA	NA	NA

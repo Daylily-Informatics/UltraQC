@@ -1,0 +1,2 @@
+Sample	Chromosome X	Chromosome Y
+RIH0_ANA0-HG002_DBC0_0.strobe	1.01	1.0

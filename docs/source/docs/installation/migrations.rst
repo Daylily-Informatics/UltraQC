@@ -24,14 +24,12 @@ To migrate, run the following commands:
 .. code:: bash
 
    cd ultraqc
-   export FLASK_APP=wsgi.py
-   flask db upgrade
+   alembic upgrade head
 
 Note: when you run these migrations, you **must** have the same
 environment as you use to run UltraQC normally, which means the same
-value of ``FLASK_DEBUG`` and ``MEGAQC_PRODUCTION`` environment
-variables. Otherwise it will migrate the wrong database
-(or a non-existing one).
+value of ``ULTRAQC_DATABASE_URL`` environment variable. Otherwise it
+will migrate the wrong database (or a non-existing one).
 
 Stamping your database
 ----------------------
@@ -51,4 +49,4 @@ revision you noted above:
 
 .. code:: bash
 
-   flask db stamp <revision ID>
+   alembic stamp <revision ID>

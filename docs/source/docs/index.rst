@@ -23,4 +23,4 @@ Indices and tables
 * :ref:`modindex`
 * :ref:`search`
 
-.. |UltraQC| image:: https://raw.githubusercontent.com/MultiQC/UltraQC/main/ultraqc/static/img/UltraQC_logo.png
+.. |UltraQC| image:: https://raw.githubusercontent.com/Daylily-Informatics/UltraQC/main/ultraqc/static/img/UltraQC_logo.svg

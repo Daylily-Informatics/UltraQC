@@ -1,7 +1,7 @@
 ---
 name: General question
-about: Ask a question about anything MegaQC
-title: Question about MegaQC
+about: Ask a question about anything UltraQC
+title: Question about UltraQC
 labels: question
 assignees: ""
 ---

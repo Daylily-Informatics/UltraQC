@@ -1,4 +1,4 @@
-<!-- Many thanks for contributing to MegaQC! -->
+<!-- Many thanks for contributing to UltraQC! -->
 
 **PR Checklist**
 

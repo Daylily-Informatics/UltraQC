@@ -22,5 +22,5 @@ jobs:
           docker-compose logs
 
       # TODO It would be nice to upload an example report as a test
-      - name: Run MegaQC Help
-        run: docker exec deployment_megaqc_1 megaqc --help
+      - name: Run UltraQC Help
+        run: docker exec deployment_ultraqc_1 ultraqc --help

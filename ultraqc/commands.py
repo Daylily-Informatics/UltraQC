@@ -18,7 +18,7 @@ from ultraqc.database import init_db
 HERE = os.path.abspath(os.path.dirname(__file__))
 PROJECT_ROOT = os.path.join(HERE, os.pardir)
 TEST_PATH = os.path.join(PROJECT_ROOT, "tests")
-MEGAQC_DATE_FORMAT = "%Y-%m-%d, %H:%M"
+ULTRAQC_DATE_FORMAT = "%Y-%m-%d, %H:%M"
 
 
 @click.command()
@@ -106,14 +106,14 @@ def initdb(db_url):
 
 
 def ultraqc_date_type(arg):
-    return datetime.strptime(arg, MEGAQC_DATE_FORMAT)
+    return datetime.strptime(arg, ULTRAQC_DATE_FORMAT)
 
 
 @click.option(
     "--date",
     default=None,
     help="Custom date to be stored for all the MultiQC files provided. Should be provided in the date format {}".format(
-        MEGAQC_DATE_FORMAT
+        ULTRAQC_DATE_FORMAT
     ),
     type=ultraqc_date_type,
 )
@@ -169,6 +169,6 @@ def upload(json_files, date):
                 # Patch in the date provided on the CLI
                 if date is not None:
                     multiqc_json_dump["config_creation_date"] = date.strftime(
-                        MEGAQC_DATE_FORMAT
+                        ULTRAQC_DATE_FORMAT
                     )
                 multiqc_ultraqc.multiqc_api_post(multiqc_json_dump)

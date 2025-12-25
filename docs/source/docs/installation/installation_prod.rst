@@ -21,25 +21,26 @@ To install using PyPI, run the following command:
 
 By default, UltraQC runs in development mode with a sqlite flat file
 database (this is to make it as simple as possible to get up and running
-for a quick test / demo). To tell UltraQC to use a production server, you
-need to set the ``MEGAQC_PRODUCTION`` environment variable to true
-(``export MEGAQC_PRODUCTION=1``).
+for a quick test / demo). For production, you should configure the following
+environment variables.
 
 If you are running UltraQC behind a custom domain name (recommended, it’s
 nicer than just having a difficult to remember IP address), then you
 need to set ``SERVER_NAME`` to the URL of the website.
 
-Add the following lines to your ``.bashrc`` file:
+Add the following lines to your ``.bashrc`` file or create a ``.env`` file:
 
 .. code:: bash
 
-   export MEGAQC_PRODUCTION=1
-   export SERVER_NAME='http://ultraqc.yourdomain.com'
+   export ULTRAQC_SECRET='your-super-secret-key-change-this'
+   export ULTRAQC_DATABASE_URL='postgresql://user:pass@localhost/ultraqc'
+   export ULTRAQC_HOST='0.0.0.0'
+   export ULTRAQC_PORT='8000'
 
 3. Set up the database
 ----------------------
 
-UltraQC uses the Flask SQLAlchemy plugin, meaning that it can be used
+UltraQC uses SQLAlchemy 2.0, meaning that it can be used
 with any SQL database (PostgreSQL, MySQL, SQLite and others).
 
 UltraQC has been developed with PostgreSQL, see below. For instructions.
@@ -83,18 +84,11 @@ https://dev.mysql.com/doc/refman/5.7/en/installing.html
 
 Then install the `Python MySQL connector`_ (alternatively with the `PyPI package`_).
 
-Now, create a custom UltraQC configuration file somewhere and set the
-environment variable ``MEGAQC_CONFIG`` to point to it. For example, in ``~/.bashrc``:
+Set the ``ULTRAQC_DATABASE_URL`` environment variable to your MySQL connection string:
 
 .. code:: bash
 
-   export MEGAQC_CONFIG="/path/to/ultraqc_config.yaml"
-
-Then in this file, set the following configuration key pair:
-
-.. code:: yaml
-
-   SQLALCHEMY_DBMS: mysql
+   export ULTRAQC_DATABASE_URL="mysql://user:pass@localhost/ultraqc"
 
 This should, hopefully, make everything work. If you have problems,
 please `create an issue`_ and we’ll do our best to help.
@@ -151,12 +145,17 @@ For more details please refer to :ref:`docker_compose_stack`.
 
 .. code:: bash
 
-   gunicorn --log-file ultraqc.log --timeout 300 ultraqc.wsgi:app
+   uvicorn ultraqc.app:create_app --factory --host 0.0.0.0 --port 8000
 
-**Note:**\ *We recommend using a long timeout as the data upload from
-MultiQC can take several minutes for large reports*
+Or using the CLI:
 
-At this point, UltraQC should be running on the default gunicorn port (``8000``)
+.. code:: bash
+
+   ultraqc run
+
+**Note:**\ *Large data uploads may take several minutes for large reports*
+
+At this point, UltraQC should be running on port ``8000``
 
 You should now have a fully functional UltraQC server running! 🎉
 
@@ -169,5 +168,5 @@ If you run an older OS, ensure that the package is installed.
 
 .. _Python MySQL connector: https://dev.mysql.com/downloads/connector/python/2.1.html
 .. _PyPI package: https://pypi.python.org/pypi/mysql-connector-python/2.0.4
-.. _create an issue: https://github.com/MultiQC/UltraQC/issues/new
-.. _deployment_folder: https://github.com/MultiQC/UltraQC/blob/main/deployment
+.. _create an issue: https://github.com/Daylily-Informatics/UltraQC/issues/new
+.. _deployment_folder: https://github.com/Daylily-Informatics/UltraQC/blob/main/deployment

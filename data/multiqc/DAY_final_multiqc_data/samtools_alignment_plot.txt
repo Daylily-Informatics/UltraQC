@@ -1,0 +1,3 @@
+Sample	Mapped (with MQ>0)	MQ0	Unmapped
+RIH0_ANA0-HG002_DBC0_0.strobe	237747.0	9822.0	2285.0
+RIH0_ANA0-HG002_DBC0_0.strobe.st	237747.0	9822.0	2285.0

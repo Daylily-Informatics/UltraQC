@@ -37,12 +37,22 @@ from ultraqc.api.constants import (
     type_to_tables_fields,
     valid_join_conditions,
 )
+from ultraqc.database import get_sync_session
 from ultraqc.model.models import *
 from ultraqc.settings import get_settings
 from ultraqc.user.models import User
 from ultraqc.utils import settings
 
 logger = logging.getLogger(__name__)
+
+
+# Compatibility shim for Flask-SQLAlchemy style db.session access
+class _DBCompat:
+    @property
+    def session(self):
+        return get_sync_session()
+
+db = _DBCompat()
 
 # Python 3 only
 lc_string = string.ascii_lowercase
@@ -750,9 +760,14 @@ def get_plot_types(user, filters=None):
         .join(PlotData)
     )
     pt_query = build_filter(pt_query, filters, PlotData)
-    fav_plot_types = [
-        (x.config_name, x.config_dataset) for x in user.favourite_plotconfigs
-    ]
+    # Fetch favourite plot configs via sync session instead of lazy-loading from async-loaded User
+    # This avoids the MissingGreenlet error when the User was loaded from an async session
+    fav_query = (
+        db.session.query(PlotConfig.config_name, PlotConfig.config_dataset)
+        .join(user_plotconfig_map, PlotConfig.config_id == user_plotconfig_map.c.plot_config_id)
+        .filter(user_plotconfig_map.c.user_id == user.user_id)
+    )
+    fav_plot_types = [(row[0], row[1]) for row in fav_query.all()]
     for row in pt_query.all():
         if row[3] == "xy_line":
             plot_type_obj = {
@@ -779,7 +794,28 @@ def get_plot_types(user, filters=None):
     return plot_types
 
 
-def aggregate_new_parameters(user, filters=None, short=True):
+def aggregate_new_parameters(session_or_user, user_or_filters=None, filters_or_short=None, short=True):
+    """
+    Get aggregated parameters for filtering.
+
+    NOTE: This function has a compatibility wrapper to handle both old and new calling conventions:
+    - Old: aggregate_new_parameters(user, filters=None, short=True)
+    - New: aggregate_new_parameters(session, user, filters, short)
+
+    The session parameter is currently ignored (uses db shim), but included for future async migration.
+    """
+    # Handle both old and new calling conventions
+    if hasattr(session_or_user, 'user_id'):
+        # Old calling convention: first arg is user
+        user = session_or_user
+        filters = user_or_filters if user_or_filters else []
+        short = filters_or_short if filters_or_short is not None else True
+    else:
+        # New calling convention: first arg is session (ignored for now)
+        user = user_or_filters
+        filters = filters_or_short if filters_or_short else []
+        # short is already set from the 4th arg
+
     if not filters:
         filters = []
 

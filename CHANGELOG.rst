@@ -1,31 +1,44 @@
 Changelog
 =========
 
+UltraQC 2.0.0 (Development)
+---------------------------
 
-Development
------------
+This is a major release that modernizes the entire codebase, migrating from Flask to FastAPI.
 
-- `[#433]`_ Rewrite of trend chart outlier detection
-   * Added a "statistic" selector that allows the selection of "measurement" or "isolation forest"
-   * Remove outlier detection from normal measurement plot, because the normal assumption is not reasonable
-   * The isolation forest statistic plots the multivariate outlier score in a non-parametric way, with an adjustable threshold
-- `[#440]`_ Set up poetry to manage the dependencies, which might keep the dependencies from breaking down, and reduce the chances of the happening of issues such as `[#430]`_
-- `[#443]`_
-   * Dropped support for Python 3.6, added support and testing for Python <= 3.11
-   * Added docker-compose logging in the CI
-   * Stopped using Meinheld workers in the Docker image, since this is largely unmaintained
-   * Fix a bug in the database script when constructing URLs that broken under new SQLAlchemy versions
-   * Bump pytest
-   * Fix a bug in pytest where we used `scope` as a positional argument
-   * Update the SubFactoryList to a new version that works with newer FactoryBoy versions
+Breaking Changes
+~~~~~~~~~~~~~~~~
 
-.. _[#430]: https://github.com/MultiQC/UltraQC/issues/430
-.. _[#440]: https://github.com/MultiQC/UltraQC/pull/440
-.. _[#433]: https://github.com/MultiQC/UltraQC/pull/433
+-  **Flask to FastAPI migration**: The entire web framework has been replaced
+-  **New authentication**: JWT token-based authentication replaces Flask-Login
+-  **Async database**: SQLAlchemy 2.0 with async support
+-  **Environment variables**: Configuration now uses ``ULTRAQC_*`` prefix instead of ``MEGAQC_*``
+-  **Python 3.9+**: Minimum Python version is now 3.9
 
-=======
+New Features
+~~~~~~~~~~~~
 
-.. _section-1:
+-  **FastAPI backend**: High-performance async API with automatic OpenAPI docs
+-  **Modern dark theme**: Sci-fi neon aesthetics with improved UI
+-  **Version from GitHub**: Version is automatically fetched from latest GitHub release
+-  **Improved API docs**: Swagger UI at ``/docs`` and ReDoc at ``/redoc``
+-  **Non-MultiQC data support**: Documentation for sending custom QC data
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+-  Complete rewrite of authentication system using JWT tokens
+-  Migrated from Flask-SQLAlchemy to SQLAlchemy 2.0 with async support
+-  Updated all dependencies to modern versions
+-  Improved test suite with async test support
+
+---
+
+Legacy Changelog (from MegaQC)
+==============================
+
+The following changelog entries are from the original MegaQC project before
+the fork to UltraQC.
 
 0.3.0
 -----
@@ -87,12 +100,11 @@ Internal Changes
 -  Many and more dependency updates
 
 
-.. _[#69]:  https://github.com/MultiQC/UltraQC/issues/69
-.. _[#138]: https://github.com/MultiQC/UltraQC/issues/138
-.. _[#139]: https://github.com/MultiQC/UltraQC/issues/139
-.. _[#140]: https://github.com/MultiQC/UltraQC/issues/140
-.. _[#148]: https://github.com/MultiQC/UltraQC/issues/148
-.. _[#156]: https://github.com/MultiQC/UltraQC/issues/156
-.. _[#170]: https://github.com/MultiQC/UltraQC/issues/170
-.. _[#194]: https://github.com/MultiQC/UltraQC/issues/194
-.. _[#443]: https://github.com/MultiQC/UltraQC/pull/443
+.. _[#69]:  https://github.com/MultiQC/MegaQC/issues/69
+.. _[#138]: https://github.com/MultiQC/MegaQC/issues/138
+.. _[#139]: https://github.com/MultiQC/MegaQC/issues/139
+.. _[#140]: https://github.com/MultiQC/MegaQC/issues/140
+.. _[#148]: https://github.com/MultiQC/MegaQC/issues/148
+.. _[#156]: https://github.com/MultiQC/MegaQC/issues/156
+.. _[#170]: https://github.com/MultiQC/MegaQC/issues/170
+.. _[#194]: https://github.com/MultiQC/MegaQC/issues/194

@@ -5,7 +5,8 @@ Submitting data
 ---------------
 
 Before you can do anything useful in UltraQC, you need to submit some
-data to the database. You do this by configuring and then running MultiQC.
+data to the database. You can do this by configuring and running MultiQC,
+or by sending data directly via the API from any source.
 
 MultiQC configuration
 ~~~~~~~~~~~~~~~~~~~~~
@@ -47,3 +48,18 @@ follows:
    [INFO   ]         multiqc : MultiQC complete
 
 **NB: You need MultiQC v1.3 or later for UltraQC integration to work.**
+
+Submitting non-MultiQC data
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+UltraQC can also accept QC data from any source via its REST API.
+See the main README for details on the JSON format and API endpoints.
+
+Example using curl:
+
+::
+
+   curl -X POST http://localhost:8000/api/upload_data \
+     -H "Content-Type: application/json" \
+     -H "access_token: YOUR_TOKEN" \
+     -d '{"report_saved_raw_data": {"multiqc_custom": {"sample1": {"metric": 0.95}}}}'

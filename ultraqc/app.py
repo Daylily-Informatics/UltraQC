@@ -8,6 +8,7 @@ This file contains the FastAPI app module, with the app factory function.
 from __future__ import print_function
 
 import logging
+import secrets
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
@@ -21,6 +22,11 @@ from markupsafe import Markup
 
 from ultraqc import version
 from ultraqc.settings import Settings, get_settings
+
+
+def generate_csrf_token() -> str:
+    """Generate a CSRF token."""
+    return secrets.token_hex(32)
 
 # Templates directory
 TEMPLATES_DIR = Path(__file__).parent / "templates"
@@ -112,6 +118,8 @@ def get_templates() -> Jinja2Templates:
         templates.env.filters["safe_markdown"] = safe_markdown
         # Add url_for to globals
         templates.env.globals["url_for"] = url_for
+        # Add csrf_token function to globals
+        templates.env.globals["csrf_token"] = generate_csrf_token
     return templates
 
 
@@ -147,6 +155,9 @@ def create_app(config: Optional[Settings] = None) -> FastAPI:
     """
     if config is None:
         config = get_settings()
+    elif isinstance(config, type):
+        # If a class was passed, instantiate it
+        config = config()
 
     app = FastAPI(
         title="UltraQC",

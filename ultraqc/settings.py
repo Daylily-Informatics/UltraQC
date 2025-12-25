@@ -9,7 +9,7 @@ import os
 import sys
 import tempfile
 from pathlib import Path
-from typing import Optional
+from typing import Dict, List, Optional
 
 import yaml
 from pydantic import computed_field
@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     """
 
     model_config = SettingsConfigDict(
-        env_prefix="MEGAQC_",
+        env_prefix="ULTRAQC_",
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
@@ -70,6 +70,26 @@ class Settings(BaseSettings):
 
     # Extra config file
     EXTRA_CONFIG: Optional[str] = None
+
+    # Plotting configuration
+    PLOT_RENDERER: str = "plotly"  # Default renderer: plotly, ggplot, echarts
+    PLOT_THEME: str = "ultraqc_dark"  # Theme: ultraqc_dark, ultraqc_light, default
+    PLOT_HEIGHT: int = 500  # Default plot height in pixels
+    PLOT_INTERACTIVE: bool = True  # Enable interactive features
+
+    # Per-plot-type renderer overrides (JSON string for env var compatibility)
+    # Example: '{"histogram": "ggplot", "scatter_3d": "plotly"}'
+    PLOT_TYPE_RENDERERS: Optional[str] = None
+
+    def get_plot_type_renderers(self) -> Dict[str, str]:
+        """Parse plot type renderer overrides."""
+        if not self.PLOT_TYPE_RENDERERS:
+            return {}
+        try:
+            import json
+            return json.loads(self.PLOT_TYPE_RENDERERS)
+        except (json.JSONDecodeError, TypeError):
+            return {}
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -126,6 +146,11 @@ class Settings(BaseSettings):
         if self.DB_PASS:
             return url.replace(self.DB_PASS, "***")
         return url
+
+    @property
+    def SQLALCHEMY_DATABASE_URI(self) -> str:
+        """Alias for DATABASE_URL for backwards compatibility."""
+        return self.DATABASE_URL
 
 
 class ProdSettings(Settings):
@@ -192,10 +217,10 @@ def get_settings() -> Settings:
     """
     Get settings based on environment variables.
     """
-    env = os.environ.get("MEGAQC_ENV", "dev").lower()
-    if env == "prod" or os.environ.get("MEGAQC_PRODUCTION", "").lower() in ("true", "1"):
+    env = os.environ.get("ULTRAQC_ENV", "dev").lower()
+    if env == "prod" or os.environ.get("ULTRAQC_PRODUCTION", "").lower() in ("true", "1"):
         return ProdSettings()
-    elif env == "test" or os.environ.get("MEGAQC_TESTING", "").lower() in ("true", "1"):
+    elif env == "test" or os.environ.get("ULTRAQC_TESTING", "").lower() in ("true", "1"):
         return TestSettings()
     else:
         return DevSettings()

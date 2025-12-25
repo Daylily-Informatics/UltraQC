@@ -10,45 +10,32 @@ import inspect
 import io
 import logging
 import os
-import subprocess
 
 import yaml
 from environs import Env
 
 import ultraqc
+from ultraqc.version import (
+    get_version,
+    get_version_info,
+    version,
+    short_version,
+)
 
 logger = logging.getLogger(__name__)
 env = Env()
 
-# Get the UltraQC version
-try:
-    from importlib.metadata import version as get_version
-    version = get_version("ultraqc")
-    short_version = version
-except Exception:
-    version = "0.0.0"
-    short_version = version
-script_path = os.path.dirname(os.path.realpath(__file__))
-git_hash = None
-git_hash_short = None
-try:
-    git_hash = subprocess.check_output(
-        ["git", "rev-parse", "HEAD"],
-        cwd=script_path,
-        stderr=subprocess.STDOUT,
-        universal_newlines=True,
-    )
-    git_hash_short = git_hash[:7]
-    version = "{} ({})".format(version, git_hash_short)
-except:
-    pass
+# Get version info including git hash
+_version_info = get_version_info()
+git_hash = _version_info.get("git_hash")
+git_hash_short = _version_info.get("git_hash_short")
 
 # Constants
-MEGAQC_DIR = os.path.dirname(os.path.realpath(inspect.getfile(ultraqc)))
+ULTRAQC_DIR = os.path.dirname(os.path.realpath(inspect.getfile(ultraqc)))
 
 ##### UltraQC script defaults
 # Default UltraQC config
-searchp_fn = os.path.join(MEGAQC_DIR, "utils", "config_defaults.yaml")
+searchp_fn = os.path.join(ULTRAQC_DIR, "utils", "config_defaults.yaml")
 with io.open(searchp_fn) as f:
     configs = yaml.load(f, Loader=yaml.FullLoader)
     for c, v in list(configs.items()):
@@ -63,14 +50,14 @@ def mqc_load_userconfig(paths=()):
     """
 
     # Load and parse installation config file if we find it
-    mqc_load_config(os.path.join(os.path.dirname(MEGAQC_DIR), "ultraqc_config.yaml"))
+    mqc_load_config(os.path.join(os.path.dirname(ULTRAQC_DIR), "ultraqc_config.yaml"))
 
     # Load and parse a user config file if we find it
     mqc_load_config(os.path.expanduser("~/.ultraqc_config.yaml"))
 
     # Load and parse a config file path set in an ENV variable if we find it
-    if env.str("MEGAQC_CONFIG_PATH") is not None:
-        mqc_load_config(env.str("MEGAQC_CONFIG_PATH"))
+    if env.str("ULTRAQC_CONFIG_PATH") is not None:
+        mqc_load_config(env.str("ULTRAQC_CONFIG_PATH"))
 
     # Load and parse a config file in this working directory if we find it
     mqc_load_config("ultraqc_config.yaml")

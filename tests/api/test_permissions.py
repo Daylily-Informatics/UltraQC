@@ -13,6 +13,7 @@ from .utils import (
     find_factory,
     instance_pk,
     list_resource_endpoints,
+    resource_from_endpoint,
     single_resource_endpoints,
     url_for,
 )

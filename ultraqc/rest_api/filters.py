@@ -1,9 +1,16 @@
 from datetime import datetime, timedelta
 
+from sqlalchemy import select
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Query
 
-from ultraqc.model.models import *
+from ultraqc.model.models import (
+    Report,
+    ReportMeta,
+    Sample,
+    SampleData,
+    SampleDataType,
+)
 
 DATE_FORMAT = "%Y-%m-%d"
 
@@ -158,22 +165,21 @@ def build_filter_query(filters):
 
         or_filters.append(concat_clauses(and_filters, "and"))
 
+    # Build SQLAlchemy Core select statement (compatible with async sessions)
     query = (
-        db.session.query(Sample)
-        .join(SampleData, isouter=True)
-        .join(
+        select(Sample.sample_id)
+        .outerjoin(SampleData)
+        .outerjoin(
             SampleDataType,
             SampleData.sample_data_type_id == SampleDataType.sample_data_type_id,
-            isouter=True,
         )
-        .join(Report, Report.report_id == Sample.report_id, isouter=True)
-        .join(ReportMeta, ReportMeta.report_id == Report.report_id, isouter=True)
-        .with_entities(Sample.sample_id)
+        .outerjoin(Report, Report.report_id == Sample.report_id)
+        .outerjoin(ReportMeta, ReportMeta.report_id == Report.report_id)
     )
 
     # A unified clause that does all the filtering demanded by the user
     filter_clause = concat_clauses(or_filters, "or")
     if filter_clause is not None:
-        return query.filter(filter_clause)
+        return query.where(filter_clause)
     else:
         return query

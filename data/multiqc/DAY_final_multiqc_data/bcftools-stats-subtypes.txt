@@ -1,0 +1,2 @@
+Sample	A>C	A>G	A>T	C>A	C>G	C>T	G>A	G>C	G>T	T>A	T>C	T>G
+RIH0_ANA0-HG002_DBC0_0.strobe.sentd.snv.sort	4.0	20.0	10.0	5.0	14.0	14.0	8.0	14.0	8.0	4.0	14.0	2.0

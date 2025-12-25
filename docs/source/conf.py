@@ -10,8 +10,8 @@ sys.path.insert(0, basedir)
 # -- Project information -----------------------------------------------------
 
 project = "UltraQC"
-copyright = "2020, UltraQC Team"
-author = "UltraQC Team"
+copyright = "2024, Daylily Informatics"
+author = "Daylily Informatics"
 
 version = ultraqc.version
 
@@ -67,7 +67,7 @@ html_context = {
     "display_github": True,
     # Set the following variables to generate the resulting github URL for each page.
     # Format Template: https://{{ github_host|default("github.com") }}/{{ github_user }}/{{ github_repo }}/blob/{{ github_version }}{{ conf_py_path }}{{ pagename }}{{ suffix }}
-    "github_user": "MultiQC",
+    "github_user": "Daylily-Informatics",
     "github_repo": "UltraQC",
     "github_version": "main/docs",
     "conf_py_path": "/source/",
@@ -98,4 +98,4 @@ def linkcode_resolve(domain, info):
     tag = "main"
     # TODO use this after the first release: tag = 'main' if 'dev' in release else ('v' + release)
 
-    return "https://github.com/MultiQC/UltraQC/blob/%s/%s" % (tag, filename)
+    return "https://github.com/Daylily-Informatics/UltraQC/blob/%s/%s" % (tag, filename)

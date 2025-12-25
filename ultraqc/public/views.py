@@ -58,10 +58,10 @@ async def home(
         {
             "request": request,
             "current_user": current_user,
-            "num_samples": await get_samples(session, count=True),
-            "num_reports": await get_reports_data(session, count=True),
-            "num_uploads_processing": await get_queued_uploads(
-                session, count=True, filter_cats=["NOT TREATED", "IN TREATMENT"]
+            "num_samples": get_samples(count=True),
+            "num_reports": get_reports_data(count=True),
+            "num_uploads_processing": get_queued_uploads(
+                count=True, filter_cats=["NOT TREATED", "IN TREATMENT"]
             ),
         },
     )
@@ -284,7 +284,7 @@ async def choose_plot_type(
         {
             "request": request,
             "current_user": current_user,
-            "num_samples": await get_samples(session, count=True),
+            "num_samples": get_samples(count=True),
         },
     )
 
@@ -297,8 +297,8 @@ async def report_plot(
 ):
     """Report plot page."""
     templates = get_templates()
-    return_data = await aggregate_new_parameters(session, current_user, [], False)
-    sample_filters = await order_sample_filters(session, current_user)
+    return_data = aggregate_new_parameters(session, current_user, [], False)
+    sample_filters = order_sample_filters(current_user)
     return templates.TemplateResponse(
         "public/report_plot.html",
         {
@@ -328,7 +328,7 @@ async def queued_uploads(
             "request": request,
             "current_user": current_user,
             "user_token": current_user.api_token,
-            "uploads": await get_queued_uploads(session),
+            "uploads": get_queued_uploads(),
         },
     )
 
@@ -346,7 +346,7 @@ async def list_dashboard(
         {
             "request": request,
             "current_user": current_user,
-            "dashboards": await get_dashboards(session, current_user),
+            "dashboards": get_dashboards(current_user),
             "user_token": current_user.api_token,
         },
     )
@@ -366,7 +366,7 @@ async def create_dashboard_page(
             "request": request,
             "current_user": current_user,
             "dashboard_id": None,
-            "favourite_plots": await get_plot_favourites(session, current_user),
+            "favourite_plots": get_plot_favourites(current_user),
             "user_token": current_user.api_token,
         },
     )
@@ -387,7 +387,7 @@ async def edit_dashboard_page(
             "request": request,
             "current_user": current_user,
             "dashboard_id": dashboard_id,
-            "favourite_plots": await get_plot_favourites(session, current_user),
+            "favourite_plots": get_plot_favourites(current_user),
             "user_token": current_user.api_token,
         },
     )
@@ -403,7 +403,7 @@ async def view_dashboard(
 ):
     """View dashboard."""
     templates = get_templates()
-    dashboard = await get_dashboard_data(session, current_user, dashboard_id)
+    dashboard = get_dashboard_data(current_user, dashboard_id)
     if dashboard is None:
         raise HTTPException(status_code=404, detail="Dashboard not found")
     return templates.TemplateResponse(
@@ -432,7 +432,7 @@ async def plot_favourites(
         {
             "request": request,
             "current_user": current_user,
-            "favourite_plots": await get_plot_favourites(session, current_user),
+            "favourite_plots": get_plot_favourites(current_user),
             "user_token": current_user.api_token,
         },
     )
@@ -453,7 +453,7 @@ async def plot_favourite(
         {
             "request": request,
             "current_user": current_user,
-            "plot_data": await get_favourite_plot_data(session, current_user, fav_id),
+            "plot_data": get_favourite_plot_data(current_user, fav_id),
             "raw": str(request.url.path).endswith("/raw"),
             "user_token": current_user.api_token,
         },
@@ -468,13 +468,13 @@ async def edit_filters(
 ):
     """Edit saved filters."""
     templates = get_templates()
-    sample_filters = await order_sample_filters(session, current_user)
+    sample_filters = order_sample_filters(current_user)
     sample_filter_counts = {}
     for sfg in sample_filters:
         sample_filter_counts[sfg] = {}
         for sf in sample_filters[sfg]:
-            sample_filter_counts[sf["id"]] = await get_samples(
-                session, filters=sf.get("sample_filter_data", []), count=True
+            sample_filter_counts[sf["id"]] = get_samples(
+                filters=sf.get("sample_filter_data", []), count=True
             )
     return templates.TemplateResponse(
         "users/organize_filters.html",
@@ -484,16 +484,16 @@ async def edit_filters(
             "sample_filters": sample_filters,
             "sample_filter_counts": sample_filter_counts,
             "user_token": current_user.api_token,
-            "num_samples": await get_samples(session, count=True),
+            "num_samples": get_samples(count=True),
         },
     )
 
 
-async def order_sample_filters(session: AsyncSession, current_user: User) -> OrderedDict:
+def order_sample_filters(current_user: User) -> OrderedDict:
     """Order sample filters by set."""
     sample_filters = OrderedDict()
     sample_filters["Global"] = [{"id": -1, "set": "Global", "name": "All Samples"}]
-    for sf in await get_user_filters(session, current_user):
+    for sf in get_user_filters(current_user):
         if sf["set"] not in sample_filters:
             sample_filters[sf["set"]] = list()
         sample_filters[sf["set"]].append(sf)
@@ -508,8 +508,8 @@ async def distributions(
 ):
     """Distributions page."""
     templates = get_templates()
-    return_data = await aggregate_new_parameters(session, current_user, [], False)
-    sample_filters = await order_sample_filters(session, current_user)
+    return_data = aggregate_new_parameters(session, current_user, [], False)
+    sample_filters = order_sample_filters(current_user)
     return templates.TemplateResponse(
         "public/distributions.html",
         {
@@ -560,8 +560,8 @@ async def comparisons(
 ):
     """Comparisons page."""
     templates = get_templates()
-    return_data = await aggregate_new_parameters(session, current_user, [], False)
-    sample_filters = await order_sample_filters(session, current_user)
+    return_data = aggregate_new_parameters(session, current_user, [], False)
+    sample_filters = order_sample_filters(current_user)
     return templates.TemplateResponse(
         "public/comparisons.html",
         {
@@ -589,14 +589,14 @@ async def edit_reports(
     user_id = None
     if not current_user.is_admin:
         user_id = current_user.user_id
-    return_data = await get_reports_data(session, count=False, user_id=user_id)
+    return_data = get_reports_data(count=False, user_id=user_id)
     return templates.TemplateResponse(
         "public/reports_management.html",
         {
             "request": request,
             "current_user": current_user,
             "report_data": return_data,
-            "report_meta_fields": await get_report_metadata_fields(session),
+            "report_meta_fields": get_report_metadata_fields(),
             "api_token": current_user.api_token,
         },
     )

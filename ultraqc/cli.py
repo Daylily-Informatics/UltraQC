@@ -11,12 +11,12 @@ import sys
 from typing import Optional
 
 import click
-import pkg_resources
 import sqlalchemy
 import uvicorn
 from environs import Env
 
 from ultraqc import settings
+from ultraqc.version import get_version, get_version_info
 
 env = Env()
 
@@ -25,18 +25,19 @@ def get_config():
     """Get the appropriate configuration based on environment."""
     from ultraqc.settings import DevConfig, ProdConfig, TestConfig
 
-    if env.bool("MEGAQC_DEBUG", False):
-        return DevConfig()
-    elif env.bool("MEGAQC_PRODUCTION", False):
+    if env.bool("ULTRAQC_PRODUCTION", False):
         return ProdConfig()
-    else:
+    elif env.bool("ULTRAQC_TEST", False):
         return TestConfig()
+    else:
+        # Default to dev config for local development
+        return DevConfig()
 
 
 def check_database(config):
     """Check if the database is initialized."""
     try:
-        dbengine = sqlalchemy.create_engine(config.SQLALCHEMY_DATABASE_URI).connect()
+        dbengine = sqlalchemy.create_engine(config.DATABASE_URL).connect()
         metadata = sqlalchemy.MetaData()
         metadata.reflect(bind=dbengine)
         if "sample_data" not in metadata.tables:
@@ -104,7 +105,7 @@ def initdb():
 
     config = get_config()
     print("Initializing database...")
-    asyncio.run(init_db(config.SQLALCHEMY_DATABASE_URI))
+    init_db(config.DATABASE_URL)
     print("Database initialized successfully!")
 
 
@@ -120,12 +121,20 @@ def shell():
 
 
 def main():
-    version = pkg_resources.get_distribution("ultraqc").version
-    print("This is UltraQC v{}\n".format(version))
+    # Get version from GitHub releases or fallback to local
+    version = get_version(include_git_hash=True)
+    version_info = get_version_info()
 
-    if env.bool("MEGAQC_DEBUG", False):
-        print(" * Environment variable MEGAQC_DEBUG is true - running in dev mode")
-    elif not env.bool("MEGAQC_PRODUCTION", False):
+    print(f"This is UltraQC v{version}")
+    print(f" * Version source: {version_info['source']}")
+
+    if version_info['git_hash_short']:
+        print(f" * Git commit: {version_info['git_hash_short']}")
+    print()
+
+    if env.bool("ULTRAQC_DEBUG", False):
+        print(" * Environment variable ULTRAQC_DEBUG is true - running in dev mode")
+    elif not env.bool("ULTRAQC_PRODUCTION", False):
         print(" * Running in test mode")
 
     # Set run_db_check for commands that need it

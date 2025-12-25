@@ -8,22 +8,21 @@ from ultraqc.app import create_app
 from ultraqc.settings import DevConfig, ProdConfig
 
 
-@pytest.mark.noautofixt
 def test_production_config():
     """
     Production config.
     """
     app = create_app(ProdConfig)
-    assert app.config["ENV"] == "prod"
-    assert app.config["DEBUG"] is False
-    assert app.config["DEBUG_TB_ENABLED"] is False
+    # FastAPI stores settings in app.state.settings
+    assert app.state.settings.ENV == "prod"
+    assert app.state.settings.DEBUG is False
 
 
-@pytest.mark.noautofixt
 def test_dev_config():
     """
     Development config.
     """
     app = create_app(DevConfig)
-    assert app.config["ENV"] == "dev"
-    assert app.config["DEBUG"] is True
+    # FastAPI stores settings in app.state.settings
+    assert app.state.settings.ENV == "dev"
+    assert app.state.settings.DEBUG is True

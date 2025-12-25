@@ -1,13 +1,13 @@
 #################################################################
-# MegaQC Defaults
+# UltraQC Defaults
 #################################################################
 # This file contains the default configuration options
-# for MegaQC. IT SHOULD NOT BE EDITED. If you want to
+# for UltraQC. IT SHOULD NOT BE EDITED. If you want to
 # change any of these config options, create a new file
 # in any of the following locations:
-#  1. <installation_dir>/megaqc_config.yaml (not pip or conda)
-#  2. ~/.megaqc_config.yaml
-#  3. <working directory>/megaqc_config.yaml
+#  1. <installation_dir>/ultraqc_config.yaml (not pip or conda)
+#  2. ~/.ultraqc_config.yaml
+#  3. <working directory>/ultraqc_config.yaml
 #################################################################
 
 # Customise the report metadata fields

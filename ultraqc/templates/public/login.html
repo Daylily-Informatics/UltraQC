@@ -2,18 +2,29 @@
 {% block content %}
 
   <h1>Log In</h1>
+
+  {% if errors %}
+  <div class="alert alert-danger" role="alert">
+    <ul class="mb-0">
+    {% for error in errors %}
+      <li>{{ error.msg if error.msg else error }}</li>
+    {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
   <form id="loginForm" class="form form-horizontal" method="POST" action="" role="form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
     <div class="form-group row">
-      {{ form.username.label(class_="col-sm-2 control-label") }}
+      <label for="username" class="col-sm-2 control-label">Username</label>
       <div class="col-sm-5">
-        {{ form.username(placeholder="Username", class_="form-control mr-sm-2") }}
+        <input type="text" name="username" id="username" placeholder="Username" class="form-control mr-sm-2" value="{{ form.username if form.username else '' }}" required>
       </div>
     </div>
     <div class="form-group row">
-      {{ form.password.label(class_="col-sm-2 control-label") }}
+      <label for="password" class="col-sm-2 control-label">Password</label>
       <div class="col-sm-5">
-        {{ form.password(placeholder="Password", class_="form-control mr-sm-2") }}
+        <input type="password" name="password" id="password" placeholder="Password" class="form-control mr-sm-2" required>
       </div>
     </div>
     <div class="form-group row">

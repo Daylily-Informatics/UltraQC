@@ -31,7 +31,7 @@
 
 
     <h3 class="mt-4">Registered users</h3>
-    {{ form.csrf_token}}
+    <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}"/>
     <table id="user_table" class="table">
       <tr>
         <th>Username</th>

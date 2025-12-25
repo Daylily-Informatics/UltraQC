@@ -20,9 +20,9 @@ env = Env()
 
 def get_config():
     """Get the appropriate configuration based on environment."""
-    if env.bool("MEGAQC_DEBUG", False):
+    if env.bool("ULTRAQC_DEBUG", False):
         return DevConfig()
-    elif env.bool("MEGAQC_PRODUCTION", False):
+    elif env.bool("ULTRAQC_PRODUCTION", False):
         return ProdConfig()
     else:
         return TestConfig()
