@@ -695,6 +695,26 @@ def get_samples(filters=None, count=False, ids=False):
         return samples
 
 
+async def get_samples_async(session: AsyncSession, filters=None, count=False, ids=False):
+    """Async version of get_samples."""
+    if not filters:
+        filters = []
+
+    # For now, just get all samples without filter logic (filters need async conversion)
+    if count:
+        stmt = select(func.count(distinct(Sample.sample_name)))
+        result = await session.execute(stmt)
+        return result.scalar()
+    elif ids:
+        stmt = select(distinct(Sample.sample_id))
+        result = await session.execute(stmt)
+        return [row[0] for row in result.all()]
+    else:
+        stmt = select(distinct(Sample.sample_name))
+        result = await session.execute(stmt)
+        return [row[0] for row in result.all()]
+
+
 def get_report_metadata_fields(filters=None):
     if not filters:
         filters = []

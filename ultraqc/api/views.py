@@ -27,6 +27,7 @@ from ultraqc.api.utils import (
     get_sample_fields_values,
     get_sample_metadata_fields,
     get_samples,
+    get_samples_async,
     get_timeline_sample_data,
     get_user_filters,
     handle_report_data,
@@ -250,7 +251,7 @@ async def get_report_plot(
     data = await request.json()
     plot_type = data.get("plot_type")
     filters = data.get("filters", [])
-    sample_names = await get_samples(session, filters)
+    sample_names = await get_samples_async(session, filters)
     html = await generate_report_plot(session, plot_type, sample_names)
     return JSONResponse(content={"success": True, "plot": html})
 
@@ -264,7 +265,7 @@ async def count_samples(
     """Count samples matching filters."""
     data = await request.json()
     filters = data.get("filters", [])
-    count = await get_samples(session, filters, count=True)
+    count = await get_samples_async(session, filters, count=True)
     return JSONResponse(content={"success": True, "count": count})
 
 
